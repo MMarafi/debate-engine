@@ -280,6 +280,10 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.assertLess(new_pro, pro_elo)
         self.assertGreater(new_con, con_elo)
 
+    def test_calculate_zero_sum_elo_invalid_outcome_type_raises(self) -> None:
+            """Passing non-MatchOutcome instance must strictly raise TypeError."""
+            with self.assertRaises(TypeError):
+                self.engine.calculate_zero_sum_elo(1200, 1200, outcome=1.0)  # type: ignore
 
 if __name__ == "__main__":
     unittest.main()
