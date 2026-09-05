@@ -7,6 +7,7 @@ Strictly relies on the Python Standard Library (Zero-Dependency).
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import math
 import re
 
 from .rules_config import DebateRules
@@ -112,8 +113,8 @@ class GameTheoryEngine:
             r"https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[^\s]*"
         )
 
-    @staticmethod
-    def tokenize_words(text: str) -> list[str]:
+    @classmethod
+    def tokenize_words(cls, text: str) -> list[str]:
         """Splits whitespace tokens and strips boundary punctuation cleanly.
 
         Serves as the single source of truth for word extraction across the engine.
@@ -137,7 +138,8 @@ class GameTheoryEngine:
     def extract_attention_challenge(cls, text: str) -> tuple[int, str]:
         """Derives deterministic verification index and word token from raw text.
 
-        Uses the character summation of the text to select an immutable target word.
+        Selects an immutable target word strictly from human-readable text tokens,
+        guaranteeing the challenge token is pure alphanumeric.
 
         Args:
             text: Raw input text from the completed round.
@@ -306,7 +308,13 @@ class GameTheoryEngine:
             raise TypeError("outcome must be an instance of MatchOutcome Enum.")
 
         expected_pro = 1.0 / (1.0 + 10.0 ** ((con_elo - pro_elo) / 400.0))
-        delta = round(self.rules.ELO_K_FACTOR * (outcome.value - expected_pro))
+        raw_delta = self.rules.ELO_K_FACTOR * (outcome.value - expected_pro)
+
+        # تقريب جبري متماظر يحافظ على المجموع الصفري (Symmetric Half-Up Rounding)
+        if raw_delta >= 0:
+            delta = int(math.floor(raw_delta + 0.5))
+        else:
+            delta = int(math.ceil(raw_delta - 0.5))
 
         new_pro_elo = pro_elo + delta
         new_con_elo = con_elo - delta
