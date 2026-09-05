@@ -13,7 +13,16 @@ from .rules_config import DebateRules
 
 
 class ValidationErrorCode(str, Enum):
-    """Language-agnostic validation error codes."""
+    """Language-agnostic validation error codes.
+
+    Attributes:
+        NONE: Submission is completely valid.
+        TIMEOUT_EXCEEDED: Turn exceeded the maximum allowed duration.
+        WORD_LIMIT_EXCEEDED: Text token count exceeds the configured ceiling.
+        MISSING_EVIDENCE: Text contains fewer citations than the minimum threshold.
+        FAILED_ATTENTION_CHECK: Judge token did not match the deterministic hash token.
+        INVALID_DATETIME: Datetimes have mixed timezone awareness or non-monotonic ordering.
+    """
 
     NONE = "NONE"
     TIMEOUT_EXCEEDED = "ERR_TIMEOUT_EXCEEDED"
@@ -41,7 +50,14 @@ class MatchOutcome(float, Enum):
 
 @dataclass(frozen=True)
 class ValidationResult:
-    """Decoupled validation outcome carrying numbers and codes instead of localized text."""
+    """Decoupled validation outcome carrying numbers and codes instead of localized text.
+
+    Attributes:
+        is_valid: Boolean indicating whether the validation check passed.
+        error_code: Standardized error code from ValidationErrorCode enum.
+        current_value: The observed metric value (e.g., word count, elapsed hours).
+        limit_value: The configured threshold value associated with the metric.
+    """
 
     is_valid: bool
     error_code: ValidationErrorCode = ValidationErrorCode.NONE
@@ -51,7 +67,13 @@ class ValidationResult:
 
 @dataclass(frozen=True)
 class RoundInput:
-    """Decoupled payload representing a round submission."""
+    """Decoupled payload representing a round submission.
+
+    Attributes:
+        text: Raw submission content containing arguments and evidence URLs.
+        turn_start_time: Timestamp marking when the round turn opened.
+        submission_time: Timestamp marking when the round was submitted.
+    """
 
     text: str
     turn_start_time: datetime
@@ -60,7 +82,19 @@ class RoundInput:
 
 @dataclass(frozen=True)
 class BallotInput:
-    """Decoupled payload representing a judge's silent boolean ballot."""
+    """Decoupled payload representing a judge's silent boolean ballot.
+
+    Attributes:
+        better_evidence: Winning side on empirical proof quality.
+        better_refutation: Winning side on rebuttal and argument deconstruction.
+        logical_consistency: Winning side on coherence and internal logic.
+        pro_ad_hominem: True if PRO committed an ad hominem penalty.
+        pro_straw_man: True if PRO committed a straw man distortion penalty.
+        con_ad_hominem: True if CON committed an ad hominem penalty.
+        con_straw_man: True if CON committed a straw man distortion penalty.
+        attention_check_response: Token entered by the evaluator during audit.
+        expected_attention_token: Deterministic challenge token derived from round text.
+    """
 
     better_evidence: WinnerSide
     better_refutation: WinnerSide
@@ -77,7 +111,11 @@ class GameTheoryEngine:
     """Deterministic rule evaluator and rating calculator."""
 
     def __init__(self, rules: DebateRules = DebateRules()) -> None:
-        """Initializes the engine with immutable configuration rules."""
+        """Initializes the engine with immutable configuration rules.
+
+        Args:
+            rules: Instance of DebateRules specifying thresholds and multipliers.
+        """
         self.rules = rules
         self.url_pattern = re.compile(
             r"https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[^\s]*"
@@ -85,7 +123,17 @@ class GameTheoryEngine:
 
     @classmethod
     def tokenize_words(cls, text: str) -> list[str]:
-        """Splits whitespace tokens and strips boundary punctuation cleanly."""
+        """Splits whitespace tokens and strips boundary punctuation cleanly.
+
+        Serves as the single source of truth for word extraction across the engine.
+        Ensures standalone punctuation symbols (e.g., '-', '*') do not count as words.
+
+        Args:
+            text: Raw input string.
+
+        Returns:
+            list[str]: Cleaned, lowercased alphanumeric tokens.
+        """
         raw_tokens = text.strip().split()
         cleaned_tokens: list[str] = []
         for token in raw_tokens:
@@ -98,7 +146,21 @@ class GameTheoryEngine:
     def extract_attention_challenge(
         cls, text: str, rules: DebateRules = DebateRules()
     ) -> tuple[int, str]:
-        """Derives deterministic verification index and word token from raw text."""
+        """Derives deterministic verification index and word token from raw text.
+
+        Selects an immutable target word strictly from human-readable text tokens,
+        guaranteeing the challenge token is pure alphanumeric.
+
+        Args:
+            text: Raw input text from the completed round.
+            rules: DebateRules instance providing the hash multiplier constant.
+
+        Returns:
+            tuple[int, str]: (human_word_index_1_based, target_token)
+
+        Raises:
+            ValueError: If text contains no valid alphanumeric words.
+        """
         words = cls.tokenize_words(text)
         if not words:
             raise ValueError("Cannot derive attention token from empty or non-word text.")
@@ -113,11 +175,18 @@ class GameTheoryEngine:
         return human_index, expected_token
 
     def validate_round(self, round_data: RoundInput) -> ValidationResult:
-        """Validates round submission enforcing timezone consistency, word limit, and URLs."""
+        """Validates round submission enforcing timezone consistency, word limit, and URLs.
+
+        Args:
+            round_data: RoundInput payload.
+
+        Returns:
+            ValidationResult: Result object containing validity status and error code.
+        """
         t_start = round_data.turn_start_time
         t_sub = round_data.submission_time
 
-        # Timezone awareness parity check
+        # Timezone awareness parity check (prevent mixing aware and naive datetimes)
         if (t_start.tzinfo is None) ^ (t_sub.tzinfo is None):
             return ValidationResult(
                 is_valid=False,
@@ -127,7 +196,7 @@ class GameTheoryEngine:
         time_elapsed = int((t_sub - t_start).total_seconds())
         max_allowed_seconds = self.rules.ROUND_TIMEOUT_HOURS * 3600
 
-        # Monotonic time check
+        # Monotonic time check (reject premature submission where t_sub < t_start)
         if time_elapsed < 0:
             return ValidationResult(
                 is_valid=False,
@@ -166,7 +235,14 @@ class GameTheoryEngine:
         return ValidationResult(is_valid=True)
 
     def validate_ballot(self, ballot: BallotInput) -> ValidationResult:
-        """Validates judge ballot against attention checks."""
+        """Validates judge ballot against attention checks.
+
+        Args:
+            ballot: BallotInput instance.
+
+        Returns:
+            ValidationResult: Pass status or FAILED_ATTENTION_CHECK error.
+        """
         if ballot.expected_attention_token:
             submitted = ballot.attention_check_response.strip().lower()
             expected = ballot.expected_attention_token.strip().lower()
@@ -179,7 +255,17 @@ class GameTheoryEngine:
         return ValidationResult(is_valid=True)
 
     def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
-        """Calculates algebraic round scores for PRO and CON debaters."""
+        """Calculates algebraic round scores for PRO and CON debaters.
+
+        Args:
+            ballot: Validated BallotInput instance.
+
+        Returns:
+            tuple[int, int]: (pro_score, con_score)
+
+        Raises:
+            ValueError: If ballot fails verification checks.
+        """
         validation = self.validate_ballot(ballot)
         if not validation.is_valid:
             raise ValueError(
@@ -216,7 +302,21 @@ class GameTheoryEngine:
     def calculate_zero_sum_elo(
         self, pro_elo: int, con_elo: int, outcome: MatchOutcome
     ) -> tuple[int, int]:
-        """Calculates zero-sum Elo rating shifts between participants."""
+        """Calculates zero-sum Elo rating shifts between participants.
+
+        Guarantees zero-sum point conservation where delta_pro + delta_con = 0.
+
+        Args:
+            pro_elo: Current Elo rating of PRO debater.
+            con_elo: Current Elo rating of CON debater.
+            outcome: MatchOutcome instance.
+
+        Returns:
+            tuple[int, int]: (new_pro_elo, new_con_elo)
+
+        Raises:
+            TypeError: If outcome is not an instance of MatchOutcome.
+        """
         if not isinstance(outcome, MatchOutcome):
             raise TypeError("outcome must be an instance of MatchOutcome Enum.")
 
