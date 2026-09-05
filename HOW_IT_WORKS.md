@@ -1,4 +1,4 @@
-# How It Works: User & Platform Guide (HOW_IT_WORKS.md)
+# How It Works: User & Platform Guide
 
 Welcome to the deterministic debate platform. This platform is governed strictly by mathematical rules, game theory, and zero-bias automation. There are no human moderators, no subjective appeals, and no hidden algorithms.
 
