@@ -7,15 +7,26 @@ Enforces 100% coverage across rules, boundaries, and mathematical invariants.
 from datetime import datetime, timedelta, timezone
 import unittest
 
-from backend.core.engine import (
-    BallotInput,
-    GameTheoryEngine,
-    MatchOutcome,
-    RoundInput,
-    ValidationErrorCode,
-    WinnerSide,
-)
-from backend.core.rules_config import DebateRules
+try:
+    from backend.core.engine import (
+        BallotInput,
+        GameTheoryEngine,
+        MatchOutcome,
+        RoundInput,
+        ValidationErrorCode,
+        WinnerSide,
+    )
+    from backend.core.rules_config import DebateRules
+except ModuleNotFoundError:
+    from core.engine import (
+        BallotInput,
+        GameTheoryEngine,
+        MatchOutcome,
+        RoundInput,
+        ValidationErrorCode,
+        WinnerSide,
+    )
+    from core.rules_config import DebateRules
 
 
 class TestGameTheoryEngine(unittest.TestCase):
@@ -50,6 +61,13 @@ class TestGameTheoryEngine(unittest.TestCase):
         """Derivation on text lacking valid word tokens raises ValueError."""
         with self.assertRaises(ValueError):
             GameTheoryEngine.extract_attention_challenge("!!! :::: ---")
+
+    def test_attention_challenge_preserves_human_token_order(self) -> None:
+        """Tokens with surrounding commas or quotes must match human visual word indexing."""
+        sample_text = 'The "premise", clearly, holds true: https://example.com'
+        idx, token = GameTheoryEngine.extract_attention_challenge(sample_text)
+        tokens = GameTheoryEngine.tokenize_words(sample_text)
+        self.assertEqual(tokens[idx - 1], token)
 
     # 2. Round Validation Gates & Exact Boundaries
 
@@ -137,6 +155,38 @@ class TestGameTheoryEngine(unittest.TestCase):
         result = self.engine.validate_round(payload)
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, ValidationErrorCode.MISSING_EVIDENCE)
+
+    def test_validate_round_mixed_timezone_awareness_fails_gracefully(self) -> None:
+        """Comparing naive and timezone-aware timestamps returns INVALID_DATETIME without crashing."""
+        naive_start = datetime(2026, 1, 1, 12, 0, 0)
+        aware_submission = datetime(2026, 1, 1, 13, 0, 0, tzinfo=timezone.utc)
+        payload = RoundInput(
+            text="Valid argument text with evidence: https://example.com",
+            turn_start_time=naive_start,
+            submission_time=aware_submission,
+        )
+        result = self.engine.validate_round(payload)
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, ValidationErrorCode.INVALID_DATETIME)
+
+    def test_validate_round_submission_before_turn_start_fails(self) -> None:
+        """Submission timestamp occurring before turn start returns INVALID_DATETIME."""
+        payload = RoundInput(
+            text="Premature submission: https://example.com",
+            turn_start_time=self.now,
+            submission_time=self.now - timedelta(seconds=5),
+        )
+        result = self.engine.validate_round(payload)
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, ValidationErrorCode.INVALID_DATETIME)
+
+    def test_word_count_ignores_standalone_punctuation_bullets(self) -> None:
+        """Standalone bullets like '*' or '-' must not inflate the core word limit count."""
+        raw_text = "* First point - second point * https://example.com"
+        tokens = GameTheoryEngine.tokenize_words(raw_text)
+        self.assertEqual(len(tokens), 5)
+        self.assertNotIn("*", tokens)
+        self.assertNotIn("-", tokens)
 
     # 3. Attention Checks & Ballot Verification Gates
 
