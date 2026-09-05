@@ -1,6 +1,6 @@
 """Platform constitution and deterministic rules configuration.
 
-Strictly relies on Python standard library (Zero external dependencies).
+Strictly relies on the Python Standard Library (Zero-Dependency).
 """
 
 from dataclasses import dataclass
