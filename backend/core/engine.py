@@ -143,7 +143,9 @@ class GameTheoryEngine:
         return cleaned_tokens
 
     @classmethod
-    def extract_attention_challenge(cls, text: str) -> tuple[int, str]:
+    def extract_attention_challenge(
+        cls, text: str, rules: DebateRules = DebateRules()
+    ) -> tuple[int, str]:
         """Derives deterministic verification index and word token from raw text.
 
         Selects an immutable target word strictly from human-readable text tokens,
@@ -151,6 +153,7 @@ class GameTheoryEngine:
 
         Args:
             text: Raw input text from the completed round.
+            rules: DebateRules instance providing the hash multiplier constant.
 
         Returns:
             tuple[int, str]: (human_word_index_1_based, target_token)
@@ -164,7 +167,7 @@ class GameTheoryEngine:
 
         num_words = len(words)
         char_sum = sum(ord(c) for c in text)
-        target_index = (char_sum * 31) % num_words
+        target_index = (char_sum * rules.ATTENTION_HASH_MULTIPLIER) % num_words
 
         expected_token = words[target_index]
         human_index = target_index + 1
