@@ -4,7 +4,7 @@
 
 Debate-Engine is a minimalist, structured, round-based debate framework. It replaces human content moderation with deterministic code-level constraints, aligning participant incentives using principles of game theory and Nash equilibrium to enforce polite, evidence-backed, and succinct discourse.
 
-> **Design & Philosophy Questions?** Read our [Frequently Asked Questions (FAQ)](FAQ.md) for deep-dives into our anti-conformity judging model, Elo rating mechanics, and procedural gates.
+> **Want to see how it works in practice?** Read our [User & Platform Guide (HOW_IT_WORKS.md)](./HOW_IT_WORKS.md) or dive into the mathematical mechanics in our [Frequently Asked Questions (FAQ.md)](./FAQ.md).
 
 ---
 
@@ -25,15 +25,15 @@ Traditional discourse platforms incentivize sensationalism and rhetorical evasio
 | :--- | :--- | :--- |
 | **Debaters** | Zero-Sum Elo rating system | Participants meticulously avoid fallacies; a single misstep sacrifices reputation points. |
 | **Evidence** | Mandatory URL validation gate | Code rejects submissions without verified external sources, eliminating unsubstantiated assertions. |
-| **Concision** | Strict word count limit (e.g., 800 words/round) | Eliminates rhetorical padding and forces concentrated counterarguments. |
+| **Concision** | Strict word count limit (800 words/round) | Eliminates rhetorical padding and forces concentrated counterarguments. |
 | **Punctuality** | Deterministic timeout forfeit (48h limit) | Eliminates filibustering; missing a round forfeits the debate automatically. |
-| **Judges** | 5-Question boolean rubric | Judges submit independent, silent boolean ballots covering logic and sourcing. No judge is penalized for dissenting votes, upholding the principle that majority consensus is not proof of truth. |
+| **Judges** | Independent Silent Ballots | Evaluators pass deterministic attention checks and submit boolean verdicts. Ties are broken algebraically by an odd quorum (3–5 judges). |
 
 ---
 
 ## The 5-Question Silent Rubric
 
-Judges do not write reviews. They submit an algebraic ballot covering five fundamental axes:
+Judges submit an algebraic ballot covering five fundamental axes:
 
 1. **Evidence & Sourcing (+1):** Did the debater provide verifiable sources rather than raw assertion?
 2. **Direct Refutation (+1):** Did the debater dismantle the opposing core thesis rather than shifting goalposts?
@@ -50,17 +50,13 @@ $$\text{Round Score} = \sum (\text{Positive Criteria}) - \sum (\text{Fallacy Pen
 The platform is decoupled into a modular architecture:
 
 * **Backend:** Python / Django LTS
-* **Frontend:** Next.js (Minimalist, readable typography)
 * **Database:** PostgreSQL
 * **Infrastructure:** 100% Docker-contained development environment
-* **Internationalization & BiDi:** Built-in support for RTL (Arabic) and LTR (English) layouts using CSS logical properties and decoupled translation keys.
-
-### Strict Architecture Rule: Zero-Dependency Core
-The game-theory engine (`backend/core/`) **must have zero external third-party dependencies**. It relies strictly on the Python Standard Library (`re`, `dataclasses`, `datetime`, `math`). Web frameworks (Django) and database queries are completely banned inside the core engine logic.
+* **Zero-Dependency Core:** The game-theory engine (`backend/core/`) relies strictly on the Python Standard Library (`re`, `dataclasses`, `datetime`, `math`). Web frameworks and database queries are strictly prohibited inside core logic.
 
 ---
 
-## Local Development (Docker-First)
+## Local Development & Deterministic Testing
 
 Ensure you have [Docker Desktop](https://www.docker.com/) installed.
 
@@ -74,35 +70,31 @@ cp .env.example .env
 
 # 3. Spin up all containers
 docker compose up --build
-
 ```
 
-Access services locally:
-* **Frontend:** `http://localhost:3000`
-* **Django API & Admin:** `http://localhost:8000`
+### Run 100% Coverage Verification Suite
+
+Execute the core mathematical tests inside the running container:
+
+```bash
+docker compose exec backend python -m unittest discover -s core/tests -p "test_*.py"
+```
 
 ---
 
-## Code Quality & Standards
+## Documentation & Architecture Index
 
-All contributions must pass strict automated gates:
-* **Style:** Strict adherence to PEP 8 and PEP 257.
-* **Linting & Formatting:** Validated with `ruff check .` and `ruff format .`.
-* **Testing:** 100% deterministic test coverage for all game-theory modules.
+For detailed system designs, lifecycle state machines, and developer guides, consult the reference documentation:
 
----
-
-## Documentation & Architecture
-
-For comprehensive system designs, game-theory derivations, and developer standards, consult the primary reference documents:
-
+* **[Debate Lifecycle & State Machine (DEBATE_FLOW.md)](./DEBATE_FLOW.md):** Strict finite-state machine transitions, turn sequencing, and forfeit triggers.
+* **[User & Platform Guide (HOW_IT_WORKS.md)](./HOW_IT_WORKS.md):** Step-by-step walkthrough for debaters and peer judges.
 * **[Architecture & Protocol Specifications (SPECIFICATION.md)](./SPECIFICATION.md):** The deterministic mathematical model, Elo conservation invariants, and scoring state machines.
-* **[Contribution Guidelines (CONTRIBUTING.md)](./CONTRIBUTING.md):** Architectural boundaries, zero-dependency rules, and Docker-first testing standards.
-* **[Engineering Roadmap (ROADMAP.md)](./ROADMAP.md):** Upcoming presentation-layer features, blind auditing, and inline refutation specifications.
-* **[Frequently Asked Questions (FAQ.md)](./FAQ.md):** Architectural rationales, game-theory mechanics, and common operational answers.
+* **[Contribution Guidelines (CONTRIBUTING.md)](./CONTRIBUTING.md):** Architectural boundaries, zero-dependency rules, and coding standards.
+* **[Frequently Asked Questions (FAQ.md)](./FAQ.md):** Rationales behind the anti-conformity judging model and Elo dynamics.
+* **[Engineering Roadmap (ROADMAP.md)](./ROADMAP.md):** Planned features, audit enhancements, and presentation layers.
 
 ---
 
 ## License
 
-Debate-Engine is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. Any modifications hosted as a network service must remain public, transparent, and open-source.
+Debate-Engine is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
