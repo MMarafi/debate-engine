@@ -12,6 +12,7 @@ The core game-theory engine lives in `backend/core/` and represents the determin
 * **Zero External Dependencies:** Importing web frameworks (`django`, `rest_framework`), database libraries, network clients (`requests`, `httpx`), or utility packages inside `backend/core/` is **strictly prohibited**.
 * **Decoupled Data Types:** The core engine operates exclusively on native Python data structures and `@dataclass` types. It must never accept, reference, or query Django ORM models directly.
 * **Pure Determinism:** Core logic functions must be pure and reproducible. No disk I/O, network calls, or non-deterministic state mutations.
+* Framework-Agnostic Core: The engine in backend/core/ must remain completely unaware of the web delivery mechanism (HTTP/Django/Next.js) and persistence layers (SQL/PostgreSQL). It operates strictly as a standalone domain library.
 
 ---
 
