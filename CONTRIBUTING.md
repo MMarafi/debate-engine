@@ -14,7 +14,9 @@ The core game-theory engine lives in `backend/core/` and represents the determin
 * **Pure Determinism:** Core logic functions must be pure and reproducible. No disk I/O, network calls, or non-deterministic state mutations.
 * **Framework-Agnostic Core**: The engine in backend/core/ must remain completely unaware of the web delivery mechanism (HTTP/Django/Next.js) and persistence layers (SQL/PostgreSQL). It operates strictly as a standalone domain library.
 * **Strict Language-Agnostic Outputs:** The core engine must never return localized text or user-facing prose. All outputs must consist strictly of deterministic numeric values, boolean flags, or standardized enum error codes (`ValidationResult`, `ValidationErrorCode`). Text translation and localization (RTL/LTR) are exclusively delegated to external presentation layers.
+* **Protocol & Matrix Conformance:** All implementations and external adapters must strictly comply with the contracts defined in `SPECIFICATION.md`. Any Pull Request violating the Architectural Conformance Matrix will be rejected automatically.
 
+  
 ---
 
 ## 2. Environment & Containerization
