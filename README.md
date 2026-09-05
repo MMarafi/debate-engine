@@ -25,7 +25,7 @@ Traditional discourse platforms incentivize sensationalism and rhetorical evasio
 | **Evidence** | Mandatory URL validation gate | Code rejects submissions without verified external sources, eliminating unsubstantiated assertions. |
 | **Concision** | Strict word count limit (e.g., 800 words/round) | Eliminates rhetorical padding and forces concentrated counterarguments. |
 | **Punctuality** | Deterministic timeout forfeit (48h limit) | Eliminates filibustering; missing a round forfeits the debate automatically. |
-| **Judges** | 5-Question boolean rubric with consensus weighting | Judges cannot submit prose. Diverging from peer consensus degrades the judge's own reputation score. |
+| **Judges** | 5-Question boolean rubric | Judges submit independent, silent boolean ballots covering logic and sourcing. No judge is penalized for dissenting votes, upholding the principle that majority consensus is not proof of truth. |
 
 ---
 
