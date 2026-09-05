@@ -31,3 +31,7 @@ class DebateRules:
     # Judge quorum configuration (Odd numbers for peer consensus)
     MIN_JUDGES: int = 3
     MAX_JUDGES: int = 5
+
+    # Round progression limits
+    ROUNDS_PER_DEBATER: int = 3
+    TOTAL_ROUNDS_LIMIT: int = 6  # 3 rounds Pro + 3 rounds Con
