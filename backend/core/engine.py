@@ -22,6 +22,14 @@ class ValidationErrorCode(str, Enum):
     FAILED_ATTENTION_CHECK = "ERR_FAILED_ATTENTION_CHECK"
 
 
+class WinnerSide(str, Enum):
+    """Explicit verdict states for positive rubric dimensions."""
+
+    PRO = "PRO"
+    CON = "CON"
+    TIED = "TIED"
+
+
 @dataclass(frozen=True)
 class ValidationResult:
     """Decoupled validation outcome carrying numbers and codes instead of text."""
@@ -45,14 +53,13 @@ class RoundInput:
 class BallotInput:
     """Decoupled payload representing a judge's silent boolean ballot."""
 
-    better_evidence: str  # "PRO", "CON", or "TIED"
-    better_refutation: str
-    logical_consistency: str
+    better_evidence: WinnerSide
+    better_refutation: WinnerSide
+    logical_consistency: WinnerSide
     pro_ad_hominem: bool
     pro_straw_man: bool
     con_ad_hominem: bool
     con_straw_man: bool
-    # Attention verification gate (values provided by external API layer)
     attention_check_response: str = ""
     expected_attention_token: str = ""
 
@@ -62,8 +69,10 @@ class GameTheoryEngine:
 
     def __init__(self, rules: DebateRules = DebateRules()) -> None:
         self.rules = rules
-        # Standard Library regex matching valid web URLs
-        self.url_pattern = re.compile(r"https?://[^\s]+")
+        # Standard Library regex enforcing valid protocol and domain structure
+        self.url_pattern = re.compile(
+            r"https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[^\s]*"
+        )
 
     def validate_round(self, round_data: RoundInput) -> ValidationResult:
         """Validates round submission returning structured numeric data and codes."""
@@ -105,7 +114,6 @@ class GameTheoryEngine:
 
     def validate_ballot(self, ballot: BallotInput) -> ValidationResult:
         """Validates judge ballot against attention checks and integrity rules."""
-        # Attention Check Gate: verifies response if expected token is set
         if ballot.expected_attention_token:
             submitted = ballot.attention_check_response.strip().lower()
             expected = ballot.expected_attention_token.strip().lower()
@@ -130,9 +138,9 @@ class GameTheoryEngine:
         ]
 
         for winner, reward in criteria_map:
-            if winner == "PRO":
+            if winner == WinnerSide.PRO:
                 pro_score += reward
-            elif winner == "CON":
+            elif winner == WinnerSide.CON:
                 con_score += reward
 
         # Fallacy penalty deductions
@@ -149,14 +157,22 @@ class GameTheoryEngine:
         return pro_score, con_score
 
     def calculate_zero_sum_elo(
-        self, pro_elo: int, con_elo: int, pro_won: bool
+        self, pro_elo: int, con_elo: int, pro_score_ratio: float
     ) -> tuple[int, int]:
-        """Calculates zero-sum Elo rating shifts between participants."""
-        expected_pro = 1.0 / (1.0 + 10.0 ** ((con_elo - pro_elo) / 400.0))
-        actual_pro = 1.0 if pro_won else 0.0
+        """Calculates zero-sum Elo rating shifts between participants.
 
-        # Point delta shift
-        delta = round(self.rules.ELO_K_FACTOR * (actual_pro - expected_pro))
+        Args:
+            pro_elo: Current rating of the PRO participant.
+            con_elo: Current rating of the CON participant.
+            pro_score_ratio: Actual outcome for PRO: 1.0 (win), 0.5 (tie), 0.0 (loss).
+        """
+        if pro_score_ratio not in (0.0, 0.5, 1.0):
+            raise ValueError("pro_score_ratio must be strictly 1.0, 0.5, or 0.0.")
+
+        expected_pro = 1.0 / (1.0 + 10.0 ** ((con_elo - pro_elo) / 400.0))
+
+        # Symmetric point delta shift
+        delta = round(self.rules.ELO_K_FACTOR * (pro_score_ratio - expected_pro))
 
         new_pro_elo = pro_elo + delta
         new_con_elo = con_elo - delta
