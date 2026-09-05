@@ -51,6 +51,7 @@ The platform is decoupled into a modular architecture:
 * **Frontend:** Next.js (Minimalist, readable typography)
 * **Database:** PostgreSQL
 * **Infrastructure:** 100% Docker-contained development environment
+* **Internationalization & BiDi:** Built-in support for RTL (Arabic) and LTR (English) layouts using CSS logical properties and decoupled translation keys.
 
 ### Strict Architecture Rule: Zero-Dependency Core
 The game-theory engine (`backend/core/`) **must have zero external third-party dependencies**. It relies strictly on the Python Standard Library (`re`, `dataclasses`, `datetime`, `math`). Web frameworks (Django) and database queries are completely banned inside the core engine logic.
