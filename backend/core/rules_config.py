@@ -15,10 +15,15 @@ class DebateRules:
     ROUND_TIMEOUT_HOURS: int = 48
     MIN_EVIDENCE_URLS: int = 1
 
+    # Positive criteria rewards
+    EVIDENCE_REWARD: int = 1
+    REFUTATION_REWARD: int = 1
+    LOGICAL_CONSISTENCY_REWARD: int = 1
+
     # Penalty weights
     AD_HOMINEM_PENALTY: int = 1
     STRAW_MAN_PENALTY: int = 1
-
+    
     # Zero-sum Elo constants
     INITIAL_ELO: int = 1200
     ELO_K_FACTOR: int = 32
