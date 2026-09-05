@@ -4,6 +4,8 @@
 
 Debate-Engine is a minimalist, structured, round-based debate framework. It replaces human content moderation with deterministic code-level constraints, aligning participant incentives using principles of game theory and Nash equilibrium to enforce polite, evidence-backed, and succinct discourse.
 
+> **Design & Philosophy Questions?** Read our [Frequently Asked Questions (FAQ)](FAQ.md) for deep-dives into our anti-conformity judging model, Elo rating mechanics, and procedural gates.
+
 ---
 
 ## Core Philosophy
@@ -87,6 +89,12 @@ All contributions must pass strict automated gates:
 * **Style:** Strict adherence to PEP 8 and PEP 257.
 * **Linting & Formatting:** Validated with `ruff check .` and `ruff format .`.
 * **Testing:** 100% deterministic test coverage for all game-theory modules.
+
+---
+
+## Documentation & FAQ
+
+For architectural rationales, game-theory derivations, and answers to common operational questions, consult the **[Frequently Asked Questions (FAQ)](FAQ.md)**.
 
 ---
 
