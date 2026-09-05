@@ -1,6 +1,6 @@
 """Platform constitution and deterministic rules configuration.
 
-Strictly relies on the Python Standard Library (Zero-Dependency).
+Strictly relies on Python standard library (Zero external dependencies).
 """
 
 from dataclasses import dataclass
@@ -31,7 +31,7 @@ class DebateRules:
     INITIAL_ELO: int = 1200
     ELO_K_FACTOR: int = 32
 
-    # Judge quorum configuration (Odd numbers for deterministic algebraic tie-breaking)
+    # Judge quorum configuration
     MIN_JUDGES: int = 3
     MAX_JUDGES: int = 5
     JUDGE_QUORUM_TIMEOUT_HOURS: int = 24
