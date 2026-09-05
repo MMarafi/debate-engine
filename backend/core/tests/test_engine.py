@@ -74,7 +74,58 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.assertEqual(result.current_value, 0)
         self.assertEqual(result.limit_value, self.rules.MIN_EVIDENCE_URLS)
 
-    # 2. Silent Ballot Scoring (Positive Criteria vs Fallacies)
+    # 2. Attention Check & Ballot Validation Gates
+
+    def test_validate_ballot_without_attention_check(self) -> None:
+        """Ballot without an expected token must pass validation unconditionally."""
+        ballot = BallotInput(
+            better_evidence="PRO",
+            better_refutation="PRO",
+            logical_consistency="PRO",
+            pro_ad_hominem=False,
+            pro_straw_man=False,
+            con_ad_hominem=False,
+            con_straw_man=False,
+        )
+        result = self.engine.validate_ballot(ballot)
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.error_code, ValidationErrorCode.NONE)
+
+    def test_validate_ballot_attention_check_success(self) -> None:
+        """Ballot matching the attention token (case and whitespace insensitive) passes."""
+        ballot = BallotInput(
+            better_evidence="PRO",
+            better_refutation="CON",
+            logical_consistency="TIED",
+            pro_ad_hominem=False,
+            pro_straw_man=False,
+            con_ad_hominem=False,
+            con_straw_man=False,
+            attention_check_response="  SampleToken  ",
+            expected_attention_token="sampletoken",
+        )
+        result = self.engine.validate_ballot(ballot)
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.error_code, ValidationErrorCode.NONE)
+
+    def test_validate_ballot_attention_check_failure(self) -> None:
+        """Mismatched attention response must return FAILED_ATTENTION_CHECK."""
+        ballot = BallotInput(
+            better_evidence="PRO",
+            better_refutation="CON",
+            logical_consistency="TIED",
+            pro_ad_hominem=False,
+            pro_straw_man=False,
+            con_ad_hominem=False,
+            con_straw_man=False,
+            attention_check_response="RandomGuess",
+            expected_attention_token="RequiredToken",
+        )
+        result = self.engine.validate_ballot(ballot)
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, ValidationErrorCode.FAILED_ATTENTION_CHECK)
+
+    # 3. Silent Ballot Scoring (Positive Criteria vs Fallacies)
 
     def test_calculate_ballot_scores_clean_win(self) -> None:
         """PRO sweeps all positive criteria with zero fallacies."""
@@ -108,7 +159,7 @@ class TestGameTheoryEngine(unittest.TestCase):
             con_straw_man=True,   # Penalty applied
         )
         pro_score, con_score = self.engine.calculate_ballot_scores(ballot)
-        
+
         # PRO: 1 (consistency) - 1 (ad hominem) = 0
         self.assertEqual(
             pro_score,
@@ -120,7 +171,7 @@ class TestGameTheoryEngine(unittest.TestCase):
             self.rules.REFUTATION_REWARD - self.rules.STRAW_MAN_PENALTY,
         )
 
-    # 3. Zero-Sum Elo Rating Shifts
+    # 4. Zero-Sum Elo Rating Shifts
 
     def test_calculate_zero_sum_elo_equal_ratings(self) -> None:
         """Win between equally rated opponents yields exact symmetric delta."""
@@ -130,7 +181,7 @@ class TestGameTheoryEngine(unittest.TestCase):
         )
         delta_pro = new_pro - pro_elo
         delta_con = con_elo - new_con
-        
+
         # Zero-sum property: gained points equal lost points
         self.assertEqual(delta_pro, delta_con)
         self.assertEqual(new_pro + new_con, pro_elo + con_elo)
@@ -143,7 +194,7 @@ class TestGameTheoryEngine(unittest.TestCase):
             pro_elo=pro_elo, con_elo=con_elo, pro_won=True
         )
         delta = new_pro - pro_elo
-        
+
         # Underdog upset delta must be greater than half K-factor
         self.assertGreater(delta, self.rules.ELO_K_FACTOR // 2)
         # Rating conservation invariant
