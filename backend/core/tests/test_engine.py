@@ -108,6 +108,19 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.assertEqual(result.error_code, ValidationErrorCode.TIMEOUT_EXCEEDED)
         self.assertGreater(result.current_value, result.limit_value)
 
+    def test_validate_round_negative_elapsed_time_fails(self) -> None:
+        """Submission occurring before turn start must return INVALID_DATETIME."""
+        premature_submission = self.now - timedelta(seconds=1)
+        payload = RoundInput(
+            text="Premature argument: https://example.com/source",
+            turn_start_time=self.now,
+            submission_time=premature_submission,
+        )
+        result = self.engine.validate_round(payload)
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, ValidationErrorCode.INVALID_DATETIME)
+        self.assertLess(result.current_value, 0)
+
     def test_validate_round_word_count_exact_boundary_passes(self) -> None:
         """Submission with exactly the max word limit passes."""
         exact_text = "word " * (self.rules.MAX_ROUND_WORDS - 1) + "https://example.com/source"
@@ -134,10 +147,18 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, ValidationErrorCode.WORD_LIMIT_EXCEEDED)
 
+    def test_word_count_ignores_standalone_punctuation_bullets(self) -> None:
+        """Standalone bullets like '*' or '-' must not inflate the core word limit count."""
+        raw_text = "* First point - second point * https://example.com"
+        tokens = GameTheoryEngine.tokenize_words(raw_text)
+        self.assertEqual(len(tokens), 5)
+        self.assertNotIn("*", tokens)
+        self.assertNotIn("-", tokens)
+
     def test_validate_round_empty_whitespace_text_fails(self) -> None:
         """Whitespace or empty text fails the external evidence gate."""
         payload = RoundInput(
-            text="   \n\t  \r\n  ",
+            text="   \n\t   \r\n  ",
             turn_start_time=self.now,
             submission_time=self.now + timedelta(minutes=5),
         )
@@ -168,25 +189,6 @@ class TestGameTheoryEngine(unittest.TestCase):
         result = self.engine.validate_round(payload)
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, ValidationErrorCode.INVALID_DATETIME)
-
-    def test_validate_round_submission_before_turn_start_fails(self) -> None:
-        """Submission timestamp occurring before turn start returns INVALID_DATETIME."""
-        payload = RoundInput(
-            text="Premature submission: https://example.com",
-            turn_start_time=self.now,
-            submission_time=self.now - timedelta(seconds=5),
-        )
-        result = self.engine.validate_round(payload)
-        self.assertFalse(result.is_valid)
-        self.assertEqual(result.error_code, ValidationErrorCode.INVALID_DATETIME)
-
-    def test_word_count_ignores_standalone_punctuation_bullets(self) -> None:
-        """Standalone bullets like '*' or '-' must not inflate the core word limit count."""
-        raw_text = "* First point - second point * https://example.com"
-        tokens = GameTheoryEngine.tokenize_words(raw_text)
-        self.assertEqual(len(tokens), 5)
-        self.assertNotIn("*", tokens)
-        self.assertNotIn("-", tokens)
 
     # 3. Attention Checks & Ballot Verification Gates
 
