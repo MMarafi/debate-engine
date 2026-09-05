@@ -6,9 +6,29 @@ Strictly relies on the Python Standard Library (Zero-Dependency).
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 import re
 
 from .rules_config import DebateRules
+
+
+class ValidationErrorCode(str, Enum):
+    """Language-agnostic validation error codes."""
+
+    NONE = "NONE"
+    TIMEOUT_EXCEEDED = "ERR_TIMEOUT_EXCEEDED"
+    WORD_LIMIT_EXCEEDED = "ERR_WORD_LIMIT_EXCEEDED"
+    MISSING_EVIDENCE = "ERR_MISSING_EVIDENCE"
+
+
+@dataclass(frozen=True)
+class ValidationResult:
+    """Decoupled validation outcome carrying numbers and codes instead of text."""
+
+    is_valid: bool
+    error_code: ValidationErrorCode = ValidationErrorCode.NONE
+    current_value: int = 0
+    limit_value: int = 0
 
 
 @dataclass(frozen=True)
@@ -41,37 +61,43 @@ class GameTheoryEngine:
         # Standard Library regex matching valid web URLs
         self.url_pattern = re.compile(r"https?://[^\s]+")
 
-    def validate_round(self, round_data: RoundInput) -> tuple[bool, str]:
-        """Validates round submission against timeout, word count, and citation gates."""
+    def validate_round(self, round_data: RoundInput) -> ValidationResult:
+        """Validates round submission returning structured numeric data and codes."""
         # 1. Timeout Check (Forfeit Rule)
-        time_elapsed = (
-            round_data.submission_time - round_data.turn_start_time
-        ).total_seconds()
+        time_elapsed = int(
+            (round_data.submission_time - round_data.turn_start_time).total_seconds()
+        )
         max_allowed_seconds = self.rules.ROUND_TIMEOUT_HOURS * 3600
 
         if time_elapsed > max_allowed_seconds:
-            return (
-                False,
-                f"Forfeit: Submission exceeded the {self.rules.ROUND_TIMEOUT_HOURS}h deadline.",
+            return ValidationResult(
+                is_valid=False,
+                error_code=ValidationErrorCode.TIMEOUT_EXCEEDED,
+                current_value=time_elapsed // 3600,
+                limit_value=self.rules.ROUND_TIMEOUT_HOURS,
             )
 
         # 2. Concision Check (Word Count Gate)
         words_count = len(round_data.text.strip().split())
         if words_count > self.rules.MAX_ROUND_WORDS:
-            return (
-                False,
-                f"Exceeded word limit: {words_count}/{self.rules.MAX_ROUND_WORDS} words.",
+            return ValidationResult(
+                is_valid=False,
+                error_code=ValidationErrorCode.WORD_LIMIT_EXCEEDED,
+                current_value=words_count,
+                limit_value=self.rules.MAX_ROUND_WORDS,
             )
 
         # 3. Evidence Gate (Mandatory External Citation)
         urls_found = len(self.url_pattern.findall(round_data.text))
         if urls_found < self.rules.MIN_EVIDENCE_URLS:
-            return (
-                False,
-                f"Evidence Gate: Must contain at least {self.rules.MIN_EVIDENCE_URLS} valid URL source.",
+            return ValidationResult(
+                is_valid=False,
+                error_code=ValidationErrorCode.MISSING_EVIDENCE,
+                current_value=urls_found,
+                limit_value=self.rules.MIN_EVIDENCE_URLS,
             )
 
-        return True, ""
+        return ValidationResult(is_valid=True)
 
     def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
         """Calculates algebraic round scores for PRO and CON debaters."""
