@@ -73,23 +73,25 @@ class GameTheoryEngine:
 
         return True, ""
 
-    def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
+def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
         """Calculates algebraic round scores for PRO and CON debaters."""
         pro_score = 0
         con_score = 0
 
-        # Positive criteria evaluation (+1 each)
-        for criterion in [
-            ballot.better_evidence,
-            ballot.better_refutation,
-            ballot.logical_consistency,
-        ]:
-            if criterion == "PRO":
-                pro_score += 1
-            elif criterion == "CON":
-                con_score += 1
+        # Positive criteria evaluation using explicit constitution rewards
+        criteria_map = [
+            (ballot.better_evidence, self.rules.EVIDENCE_REWARD),
+            (ballot.better_refutation, self.rules.REFUTATION_REWARD),
+            (ballot.logical_consistency, self.rules.LOGICAL_CONSISTENCY_REWARD),
+        ]
 
-        # Fallacy penalty deductions (-1 each)
+        for winner, reward in criteria_map:
+            if winner == "PRO":
+                pro_score += reward
+            elif winner == "CON":
+                con_score += reward
+
+        # Fallacy penalty deductions
         if ballot.pro_ad_hominem:
             pro_score -= self.rules.AD_HOMINEM_PENALTY
         if ballot.pro_straw_man:
@@ -101,7 +103,7 @@ class GameTheoryEngine:
             con_score -= self.rules.STRAW_MAN_PENALTY
 
         return pro_score, con_score
-
+    
     def calculate_zero_sum_elo(
         self, pro_elo: int, con_elo: int, pro_won: bool
     ) -> tuple[int, int]:
