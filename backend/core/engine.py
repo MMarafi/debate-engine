@@ -183,6 +183,15 @@ class GameTheoryEngine:
         time_elapsed = int((t_sub - t_start).total_seconds())
         max_allowed_seconds = self.rules.ROUND_TIMEOUT_HOURS * 3600
 
+        # حماية النطاق الزمني الرتيب (Monotonic Time Guard)
+        if time_elapsed < 0:
+            return ValidationResult(
+                is_valid=False,
+                error_code=ValidationErrorCode.INVALID_DATETIME,
+                current_value=time_elapsed,
+                limit_value=0,
+            )
+
         if time_elapsed > max_allowed_seconds:
             return ValidationResult(
                 is_valid=False,
