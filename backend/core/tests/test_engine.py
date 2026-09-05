@@ -26,7 +26,31 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.engine = GameTheoryEngine(rules=self.rules)
         self.now = datetime.now(timezone.utc)
 
-    # 1. Round Validation Gates & Exact Boundaries
+    # 1. Attention Challenge Derivation (Extraction Protocol)
+
+    def test_extract_attention_challenge_determinism(self) -> None:
+        """Same input text must produce identical word index and token every execution."""
+        sample_text = "Logic and empirical evidence must drive structured debate: https://example.com"
+        idx1, token1 = GameTheoryEngine.extract_attention_challenge(sample_text)
+        idx2, token2 = GameTheoryEngine.extract_attention_challenge(sample_text)
+
+        self.assertEqual(idx1, idx2)
+        self.assertEqual(token1, token2)
+        self.assertIsInstance(idx1, int)
+        self.assertTrue(token1.isalnum())
+
+    def test_extract_attention_challenge_strips_punctuation(self) -> None:
+        """Verification token must not contain attached commas, dots, or colons."""
+        text_with_punctuation = "First, second. Third: fourth! https://source.org"
+        _, token = GameTheoryEngine.extract_attention_challenge(text_with_punctuation)
+        self.assertRegex(token, r"^\w+$")
+
+    def test_extract_attention_challenge_raises_on_empty_text(self) -> None:
+        """Derivation on text lacking valid word tokens raises ValueError."""
+        with self.assertRaises(ValueError):
+            GameTheoryEngine.extract_attention_challenge("!!! :::: ---")
+
+    # 2. Round Validation Gates & Exact Boundaries
 
     def test_validate_round_success(self) -> None:
         """Valid submission adhering to time, word limits, and citations."""
@@ -113,7 +137,7 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, ValidationErrorCode.MISSING_EVIDENCE)
 
-    # 2. Attention Checks & Ballot Verification Gates
+    # 3. Attention Checks & Ballot Verification Gates
 
     def test_validate_ballot_unconditional_when_no_token_expected(self) -> None:
         """Ballot without an expected token passes validation by default."""
@@ -182,7 +206,7 @@ class TestGameTheoryEngine(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.engine.calculate_ballot_scores(invalid_ballot)
 
-    # 3. Silent Ballot Scoring & Negative Preservations
+    # 4. Silent Ballot Scoring & Negative Preservations
 
     def test_calculate_ballot_scores_clean_win(self) -> None:
         """PRO sweeps all positive criteria with zero fallacies."""
@@ -222,7 +246,7 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.assertEqual(pro_score, expected_penalty)
         self.assertEqual(con_score, 0)
 
-    # 4. Zero-Sum Elo Invariants & Outcomes
+    # 5. Zero-Sum Elo Invariants & Outcomes
 
     def test_calculate_zero_sum_elo_pro_wins(self) -> None:
         """PRO win yields symmetric delta conservation."""
