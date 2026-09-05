@@ -13,6 +13,7 @@ The core game-theory engine lives in `backend/core/` and represents the determin
 * **Decoupled Data Types:** The core engine operates exclusively on native Python data structures and `@dataclass` types. It must never accept, reference, or query Django ORM models directly.
 * **Pure Determinism:** Core logic functions must be pure and reproducible. No disk I/O, network calls, or non-deterministic state mutations.
 * **Framework-Agnostic Core**: The engine in backend/core/ must remain completely unaware of the web delivery mechanism (HTTP/Django/Next.js) and persistence layers (SQL/PostgreSQL). It operates strictly as a standalone domain library.
+* **Strict Language-Agnostic Outputs:** The core engine must never return localized text or user-facing prose. All outputs must consist strictly of deterministic numeric values, boolean flags, or standardized enum error codes (`ValidationResult`, `ValidationErrorCode`). Text translation and localization (RTL/LTR) are exclusively delegated to external presentation layers.
 
 ---
 
