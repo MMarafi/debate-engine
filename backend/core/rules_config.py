@@ -15,6 +15,9 @@ class DebateRules:
     ROUND_TIMEOUT_HOURS: int = 48
     MIN_EVIDENCE_URLS: int = 1
 
+    # Deterministic token derivation constants
+    ATTENTION_HASH_MULTIPLIER: int = 31
+
     # Positive criteria rewards
     EVIDENCE_REWARD: int = 1
     REFUTATION_REWARD: int = 1
@@ -23,14 +26,15 @@ class DebateRules:
     # Penalty weights
     AD_HOMINEM_PENALTY: int = 1
     STRAW_MAN_PENALTY: int = 1
-    
+
     # Zero-sum Elo constants
     INITIAL_ELO: int = 1200
     ELO_K_FACTOR: int = 32
 
-    # Judge quorum configuration (Odd numbers for peer consensus)
+    # Judge quorum configuration (Odd numbers for deterministic algebraic tie-breaking)
     MIN_JUDGES: int = 3
     MAX_JUDGES: int = 5
+    JUDGE_QUORUM_TIMEOUT_HOURS: int = 24
 
     # Round progression limits
     ROUNDS_PER_DEBATER: int = 3
