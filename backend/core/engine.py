@@ -40,7 +40,14 @@ class MatchOutcome(float, Enum):
 
 @dataclass(frozen=True)
 class ValidationResult:
-    """Decoupled validation outcome carrying numbers and codes instead of text."""
+    """Decoupled validation outcome carrying numbers and codes instead of text.
+
+    Attributes:
+        is_valid: Boolean indicating whether the validation check passed.
+        error_code: Standardized error code from ValidationErrorCode enum.
+        current_value: The observed metric value (e.g., word count, elapsed hours).
+        limit_value: The configured threshold value associated with the metric.
+    """
 
     is_valid: bool
     error_code: ValidationErrorCode = ValidationErrorCode.NONE
@@ -50,7 +57,13 @@ class ValidationResult:
 
 @dataclass(frozen=True)
 class RoundInput:
-    """Decoupled payload representing a round submission."""
+    """Decoupled payload representing a round submission.
+
+    Attributes:
+        text: Raw submission content containing arguments and evidence URLs.
+        turn_start_time: UTC timestamp marking when the round turn opened.
+        submission_time: UTC timestamp marking when the round was submitted.
+    """
 
     text: str
     turn_start_time: datetime
@@ -59,7 +72,19 @@ class RoundInput:
 
 @dataclass(frozen=True)
 class BallotInput:
-    """Decoupled payload representing a judge's silent boolean ballot."""
+    """Decoupled payload representing a judge's silent boolean ballot.
+
+    Attributes:
+        better_evidence: Winning side on empirical proof quality.
+        better_refutation: Winning side on rebuttal and argument deconstruction.
+        logical_consistency: Winning side on coherence and internal logic.
+        pro_ad_hominem: True if PRO committed a personal attack deduction.
+        pro_straw_man: True if PRO committed a straw man distortion deduction.
+        con_ad_hominem: True if CON committed a personal attack deduction.
+        con_straw_man: True if CON committed a straw man distortion deduction.
+        attention_check_response: Token entered by the evaluator during audit.
+        expected_attention_token: Deterministic challenge token derived from round text.
+    """
 
     better_evidence: WinnerSide
     better_refutation: WinnerSide
@@ -76,6 +101,11 @@ class GameTheoryEngine:
     """Deterministic rule evaluator and rating calculator."""
 
     def __init__(self, rules: DebateRules = DebateRules()) -> None:
+        """Initializes the engine with immutable configuration rules.
+
+        Args:
+            rules: Instance of DebateRules specifying thresholds and multipliers.
+        """
         self.rules = rules
         # Standard Library regex enforcing valid protocol and domain structure
         self.url_pattern = re.compile(
@@ -86,11 +116,19 @@ class GameTheoryEngine:
     def extract_attention_challenge(text: str) -> tuple[int, str]:
         """Derives deterministic verification index and word token from raw text.
 
+        Uses the character summation of the text as a pseudo-random seed to pick
+        a verifiable target word.
+
+        Args:
+            text: Raw input text from the completed round.
+
         Returns:
-            tuple[int, str]: (human_word_index_1_based, target_token)
+            tuple[int, str]: A pair containing:
+                - human_word_index_1_based: 1-indexed word position for human prompt.
+                - target_token: Normalized lowercase word expected as verification.
 
         Raises:
-            ValueError: If text contains no alphanumeric words.
+            ValueError: If text contains no alphanumeric Unicode words.
         """
         words = re.findall(r"\b\w+\b", text.lower(), flags=re.UNICODE)
         if not words:
@@ -106,7 +144,16 @@ class GameTheoryEngine:
         return human_index, expected_token
 
     def validate_round(self, round_data: RoundInput) -> ValidationResult:
-        """Validates round submission returning structured numeric data and codes."""
+        """Validates round submission returning structured numeric data and codes.
+
+        Evaluates submission window, whitespace word bounds, and evidence citations.
+
+        Args:
+            round_data: RoundInput instance containing text and timestamps.
+
+        Returns:
+            ValidationResult: Result object containing validity flag and error code.
+        """
         time_elapsed = int(
             (round_data.submission_time - round_data.turn_start_time).total_seconds()
         )
@@ -141,7 +188,14 @@ class GameTheoryEngine:
         return ValidationResult(is_valid=True)
 
     def validate_ballot(self, ballot: BallotInput) -> ValidationResult:
-        """Validates judge ballot against attention checks and integrity rules."""
+        """Validates judge ballot against attention checks and integrity rules.
+
+        Args:
+            ballot: BallotInput instance containing judge assessments and verification tokens.
+
+        Returns:
+            ValidationResult: Result object indicating pass or attention check failure.
+        """
         if ballot.expected_attention_token:
             submitted = ballot.attention_check_response.strip().lower()
             expected = ballot.expected_attention_token.strip().lower()
@@ -154,7 +208,19 @@ class GameTheoryEngine:
         return ValidationResult(is_valid=True)
 
     def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
-        """Calculates algebraic round scores for PRO and CON debaters."""
+        """Calculates algebraic round scores for PRO and CON debaters.
+
+        Sums positive criteria rewards and subtracts fallacy deductions.
+
+        Args:
+            ballot: Validated BallotInput instance.
+
+        Returns:
+            tuple[int, int]: (pro_score, con_score) algebraic totals.
+
+        Raises:
+            ValueError: If the submitted ballot fails validation constraints.
+        """
         validation = self.validate_ballot(ballot)
         if not validation.is_valid:
             raise ValueError(
@@ -191,7 +257,22 @@ class GameTheoryEngine:
     def calculate_zero_sum_elo(
         self, pro_elo: int, con_elo: int, outcome: MatchOutcome
     ) -> tuple[int, int]:
-        """Calculates zero-sum Elo rating shifts between participants."""
+        """Calculates zero-sum Elo rating shifts between participants.
+
+        Enforces rating conservation where point gains strictly equal point deductions
+        ($\\Delta_{\\text{PRO}} + \\Delta_{\\text{CON}} = 0$).
+
+        Args:
+            pro_elo: Current Elo rating of the PRO participant.
+            con_elo: Current Elo rating of the CON participant.
+            outcome: MatchOutcome enum instance representing the match result.
+
+        Returns:
+            tuple[int, int]: Updated ratings (new_pro_elo, new_con_elo).
+
+        Raises:
+            TypeError: If outcome is not an instance of MatchOutcome.
+        """
         if not isinstance(outcome, MatchOutcome):
             raise TypeError("outcome must be an instance of MatchOutcome Enum.")
 
