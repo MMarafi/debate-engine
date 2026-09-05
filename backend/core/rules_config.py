@@ -22,3 +22,7 @@ class DebateRules:
     # Zero-sum Elo constants
     INITIAL_ELO: int = 1200
     ELO_K_FACTOR: int = 32
+
+    # Judge quorum configuration (Odd numbers for peer consensus)
+    MIN_JUDGES: int = 3
+    MAX_JUDGES: int = 5
