@@ -19,6 +19,7 @@ class ValidationErrorCode(str, Enum):
     TIMEOUT_EXCEEDED = "ERR_TIMEOUT_EXCEEDED"
     WORD_LIMIT_EXCEEDED = "ERR_WORD_LIMIT_EXCEEDED"
     MISSING_EVIDENCE = "ERR_MISSING_EVIDENCE"
+    FAILED_ATTENTION_CHECK = "ERR_FAILED_ATTENTION_CHECK"
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,9 @@ class BallotInput:
     pro_straw_man: bool
     con_ad_hominem: bool
     con_straw_man: bool
+    # Attention verification gate (values provided by external API layer)
+    attention_check_response: str = ""
+    expected_attention_token: str = ""
 
 
 class GameTheoryEngine:
@@ -96,6 +100,20 @@ class GameTheoryEngine:
                 current_value=urls_found,
                 limit_value=self.rules.MIN_EVIDENCE_URLS,
             )
+
+        return ValidationResult(is_valid=True)
+
+    def validate_ballot(self, ballot: BallotInput) -> ValidationResult:
+        """Validates judge ballot against attention checks and integrity rules."""
+        # Attention Check Gate: verifies response if expected token is set
+        if ballot.expected_attention_token:
+            submitted = ballot.attention_check_response.strip().lower()
+            expected = ballot.expected_attention_token.strip().lower()
+            if submitted != expected:
+                return ValidationResult(
+                    is_valid=False,
+                    error_code=ValidationErrorCode.FAILED_ATTENTION_CHECK,
+                )
 
         return ValidationResult(is_valid=True)
 
