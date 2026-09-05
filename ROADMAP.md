@@ -1,15 +1,15 @@
 # Engineering Roadmap & Upcoming Specifications
 
-This document tracks upcoming architectural features, integrity safeguards, and application-layer milestones for Debate-Engine.
+This document tracks completed architectural milestones, upcoming features, integrity safeguards, and application-layer milestones for Debate-Engine.
 
 ---
 
-## 1. Core Logic Enhancements (backend/core/)
+## 1. Core Logic Status & Enhancements (backend/core/)
 
-### Attention Checks (Anti-Random Voting Gate)
-* **Objective:** Ensure judges actively read submissions rather than casting random boolean votes.
-* **Mechanism:** Add an immutable verification field to `BallotInput`.
-* **Behavior:** The engine rejects or invalidates ballots failing an objective reading check prior to algebraic score calculation.
+### [Completed] Deterministic Attention Protocol
+* **Status:** Implemented in `GameTheoryEngine` with 100% test coverage.
+* **Mechanism:** Derives an immutable verification challenge token deterministically via string summation hashing.
+* **Specification:** Formalized in `SPECIFICATION.md` and enforced via pure standard-library constraints.
 
 ### Fallacy Calibration & Strict Definitions
 * **Objective:** Minimize subjective interpretations of Ad Hominem and Straw Man penalties across independent evaluators.
@@ -18,6 +18,12 @@ This document tracks upcoming architectural features, integrity safeguards, and 
 ---
 
 ## 2. Backend & Application Layer (Django / API)
+
+### Argument Aggregation & Serialization Adapter
+* **Objective:** Serve as the translation bridge between segmented frontend refutations and the deterministic core engine.
+* **Mechanisms:**
+  * Ingest structured blocks from the client, automatically appending standardized indicators (e.g., `[Unrebutted / لم يتم الرد]`) for abandoned arguments.
+  * Compile structured refutations into standard round text payloads to feed directly into `GameTheoryEngine.validate_round`.
 
 ### Anti-Collusion & Sybil Resistance
 * **Objective:** Prevent coordinated voting rings and biased judging blocs.
@@ -45,6 +51,13 @@ This document tracks upcoming architectural features, integrity safeguards, and 
 ---
 
 ## 3. Frontend & Presentation Layer (Next.js)
+
+### Inline Refutation & Paragraph-Level Pairing
+* **Objective:** Eliminate Gish Gallop and evasion by forcing point-by-point counter-arguments.
+* **Mechanisms:**
+  * Deconstruct opponent rounds into inspectable thesis/claim segments.
+  * Render parallel input containers next to each claim.
+  * Dynamically tag empty or skipped claims with a explicit visual badge (`[Unrebutted / لم يتم الرد]`) prior to payload submission.
 
 ### BiDi & Neutral Display
 * Implement clean LTR (English) and RTL (Arabic) rendering using CSS logical properties.
