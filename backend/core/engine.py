@@ -73,7 +73,7 @@ class GameTheoryEngine:
 
         return True, ""
 
-def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
+    def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
         """Calculates algebraic round scores for PRO and CON debaters."""
         pro_score = 0
         con_score = 0
@@ -103,7 +103,7 @@ def calculate_ballot_scores(self, ballot: BallotInput) -> tuple[int, int]:
             con_score -= self.rules.STRAW_MAN_PENALTY
 
         return pro_score, con_score
-    
+
     def calculate_zero_sum_elo(
         self, pro_elo: int, con_elo: int, pro_won: bool
     ) -> tuple[int, int]:
