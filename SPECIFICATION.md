@@ -13,7 +13,7 @@ The lifecycle of a round and its parent debate is governed by a finite state mac
   * *Timeout (48h):* Transitions to `FORFEIT`. The forfeiting party is assessed a loss via `calculate_zero_sum_elo` (using `MatchOutcome.PRO_WIN` or `MatchOutcome.CON_WIN` in favor of the active opponent).
 * **EVALUATING:** Round validated (`is_valid == True`). Judge ballots are masked and collected silently.
   * *Quorum Timeout (24h):* If active ballots are strictly below `MIN_JUDGES` (3), transitions to `VOID` (No-Contest). Rating invariant: **Zero Elo delta shift**.
-  * *Quorum Reached ($3 \le N \le 5$):* Transitions to `EVALUATED`.
+  * Quorum Reached (3 <= N <= 5): Transitions to `EVALUATED`.
 * **EVALUATED:** Ballots unmasked; algebraic scores aggregated.
 * **CONCLUDED:** Final debate round completed; Elo shifts committed to persistent storage.
 
@@ -24,16 +24,21 @@ The lifecycle of a round and its parent debate is governed by a finite state mac
 To eliminate random voting and bot automation without relying on external PRNGs or network calls, the verification token MUST be derived deterministically from the submitted text payload.
 
 ### Mathematical Definition:
+
 1. Let the raw text of `RoundInput` be processed into a sequence of characters $C = [c_1, c_2, \dots, c_m]$ and an array of whitespace-separated, lower-cased words $W = [w_0, w_1, \dots, w_{L-1}]$.
+
 2. Compute the deterministic pseudo-hash index $H$:
    $$H = \sum_{i=1}^{m} \left( \text{ord}(c_i) \times 31^{m - i} \right)$$
-   *(Or in lightweight cumulative form: $H = \sum_{c \in C} \text{ord}(c)$)*
-3. The pseudo-random target index $K$ is bounded over word count $L$:
+   *(Or in lightweight cumulative form:)*
+   $$H = \sum_{c \in C} \text{ord}(c)$$
+   
+4. The pseudo-random target index $K$ is bounded over word count $L$:
    $$K = \left( \sum_{c \in C} \text{ord}(c) \times 31 \right) \pmod L$$
-4. The expected verification token is:
-   $$\text{expected\_attention\_token} = w_K$$
-5. The application layer prompts the judge with an objective comprehension challenge:
-   > *"Enter word number $K + 1$ from the opponent's text body."*
+
+5. The expected verification token is: `expected_attention_token` = $w_K$
+
+6. The application layer prompts the judge with an objective comprehension challenge:
+   > "Enter word number `K + 1` from the opponent's text body."
 
 ---
 
