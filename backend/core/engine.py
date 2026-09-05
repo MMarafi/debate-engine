@@ -7,14 +7,22 @@ Strictly relies on the Python Standard Library (Zero-Dependency).
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-import math
 import re
 
 from .rules_config import DebateRules
 
 
 class ValidationErrorCode(str, Enum):
-    """Language-agnostic validation error codes."""
+    """Language-agnostic validation error codes.
+
+    Attributes:
+        NONE: Submission is completely valid.
+        TIMEOUT_EXCEEDED: Turn exceeded the maximum allowed duration.
+        WORD_LIMIT_EXCEEDED: Text token count exceeds the configured ceiling.
+        MISSING_EVIDENCE: Text contains fewer citations than the minimum threshold.
+        FAILED_ATTENTION_CHECK: Judge token did not match the deterministic hash token.
+        INVALID_DATETIME: Datetimes have mixed timezone awareness or non-monotonic ordering.
+    """
 
     NONE = "NONE"
     TIMEOUT_EXCEEDED = "ERR_TIMEOUT_EXCEEDED"
@@ -42,7 +50,7 @@ class MatchOutcome(float, Enum):
 
 @dataclass(frozen=True)
 class ValidationResult:
-    """Decoupled validation outcome carrying numbers and codes instead of text.
+    """Decoupled validation outcome carrying numbers and codes instead of localized text.
 
     Attributes:
         is_valid: Boolean indicating whether the validation check passed.
@@ -80,10 +88,10 @@ class BallotInput:
         better_evidence: Winning side on empirical proof quality.
         better_refutation: Winning side on rebuttal and argument deconstruction.
         logical_consistency: Winning side on coherence and internal logic.
-        pro_ad_hominem: True if PRO committed a personal attack deduction.
-        pro_straw_man: True if PRO committed a straw man distortion deduction.
-        con_ad_hominem: True if CON committed a personal attack deduction.
-        con_straw_man: True if CON committed a straw man distortion deduction.
+        pro_ad_hominem: True if PRO committed an ad hominem penalty.
+        pro_straw_man: True if PRO committed a straw man distortion penalty.
+        con_ad_hominem: True if CON committed an ad hominem penalty.
+        con_straw_man: True if CON committed a straw man distortion penalty.
         attention_check_response: Token entered by the evaluator during audit.
         expected_attention_token: Deterministic challenge token derived from round text.
     """
@@ -175,7 +183,7 @@ class GameTheoryEngine:
         t_start = round_data.turn_start_time
         t_sub = round_data.submission_time
 
-        # حماية التوقيت (Timezone Awareness Guard)
+        # Timezone awareness parity check (prevent mixing aware and naive datetimes)
         if (t_start.tzinfo is None) ^ (t_sub.tzinfo is None):
             return ValidationResult(
                 is_valid=False,
@@ -185,7 +193,7 @@ class GameTheoryEngine:
         time_elapsed = int((t_sub - t_start).total_seconds())
         max_allowed_seconds = self.rules.ROUND_TIMEOUT_HOURS * 3600
 
-        # حماية النطاق الزمني الرتيب (Monotonic Time Guard)
+        # Monotonic time check (reject premature submission where t_sub < t_start)
         if time_elapsed < 0:
             return ValidationResult(
                 is_valid=False,
@@ -202,7 +210,7 @@ class GameTheoryEngine:
                 limit_value=self.rules.ROUND_TIMEOUT_HOURS,
             )
 
-        # توحيد مصدر عد الكلمات (Unified Word Count Source of Truth)
+        # Single source of truth for word token count
         words_count = len(self.tokenize_words(round_data.text))
         if words_count > self.rules.MAX_ROUND_WORDS:
             return ValidationResult(
@@ -293,6 +301,8 @@ class GameTheoryEngine:
     ) -> tuple[int, int]:
         """Calculates zero-sum Elo rating shifts between participants.
 
+        Guarantees zero-sum point conservation where delta_pro + delta_con = 0.
+
         Args:
             pro_elo: Current Elo rating of PRO debater.
             con_elo: Current Elo rating of CON debater.
@@ -308,13 +318,7 @@ class GameTheoryEngine:
             raise TypeError("outcome must be an instance of MatchOutcome Enum.")
 
         expected_pro = 1.0 / (1.0 + 10.0 ** ((con_elo - pro_elo) / 400.0))
-        raw_delta = self.rules.ELO_K_FACTOR * (outcome.value - expected_pro)
-
-        # تقريب جبري متماظر يحافظ على المجموع الصفري (Symmetric Half-Up Rounding)
-        if raw_delta >= 0:
-            delta = int(math.floor(raw_delta + 0.5))
-        else:
-            delta = int(math.ceil(raw_delta - 0.5))
+        delta = round(self.rules.ELO_K_FACTOR * (outcome.value - expected_pro))
 
         new_pro_elo = pro_elo + delta
         new_con_elo = con_elo - delta
