@@ -22,6 +22,7 @@ class TestGameTheoryEngine(unittest.TestCase):
     """Rigorous verification suite for core engine logic and boundary cases."""
 
     def setUp(self) -> None:
+        """Initializes the test suite with standard rules and UTC clock."""
         self.rules = DebateRules()
         self.engine = GameTheoryEngine(rules=self.rules)
         self.now = datetime.now(timezone.utc)
@@ -281,9 +282,10 @@ class TestGameTheoryEngine(unittest.TestCase):
         self.assertGreater(new_con, con_elo)
 
     def test_calculate_zero_sum_elo_invalid_outcome_type_raises(self) -> None:
-            """Passing non-MatchOutcome instance must strictly raise TypeError."""
-            with self.assertRaises(TypeError):
-                self.engine.calculate_zero_sum_elo(1200, 1200, outcome=1.0)  # type: ignore
+        """Passing non-MatchOutcome instance must strictly raise TypeError."""
+        with self.assertRaises(TypeError):
+            self.engine.calculate_zero_sum_elo(1200, 1200, outcome=1.0)  # type: ignore
+
 
 if __name__ == "__main__":
     unittest.main()
