@@ -92,9 +92,14 @@ All contributions must pass strict automated gates:
 
 ---
 
-## Documentation & FAQ
+## Documentation & Architecture
 
-For architectural rationales, game-theory derivations, and answers to common operational questions, consult the **[Frequently Asked Questions (FAQ)](FAQ.md)**.
+For comprehensive system designs, game-theory derivations, and developer standards, consult the primary reference documents:
+
+* **[Architecture & Protocol Specifications (SPECIFICATION.md)](./SPECIFICATION.md):** The deterministic mathematical model, Elo conservation invariants, and scoring state machines.
+* **[Contribution Guidelines (CONTRIBUTING.md)](./CONTRIBUTING.md):** Architectural boundaries, zero-dependency rules, and Docker-first testing standards.
+* **[Engineering Roadmap (ROADMAP.md)](./ROADMAP.md):** Upcoming presentation-layer features, blind auditing, and inline refutation specifications.
+* **[Frequently Asked Questions (FAQ.md)](./FAQ.md):** Architectural rationales, game-theory mechanics, and common operational answers.
 
 ---
 
