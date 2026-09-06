@@ -1,99 +1,101 @@
 # RFC 001: Game-Theoretic Incentive Design & Nash Equilibrium
-*Status: RATIFIED / TARGET SPECIFICATION (v2.1)*  
+*Status: RATIFIED / TARGET SPECIFICATION (v2.2)*  
 *Target Engine: Debate-Engine Core v2.0*  
 
 ---
 
 ## 1. Design Philosophy
 
-The objective is to engineer an **Incentive-Compatible Mechanism Design** where strict truthfulness, empirical sourcing, and uncorrupted textual auditing form the **strictly dominant strategy** for all participants. Any deviation—such as rhetorical fallacies, evasive omissions, lazy auditing, herd conformity, or partisan bias—deterministically reduces a participant's expected utility.
+The objective is to engineer an **Incentive-Compatible Mechanism Design** where strict truthfulness, empirical sourcing, dialectical integrity, and uncorrupted textual auditing form the **strictly dominant strategy** for all participants. Any deviation—such as rhetorical fallacies, evasive omissions, lazy auditing, herd conformity, sybil collusion, or partisan bias—deterministically reduces a participant's expected utility across dual evaluation ledgers.
 
 ---
 
-## 2. Debater Nash Equilibrium
+## 2. Dual-Ledger Debater Architecture & Nash Equilibrium
+
+To prevent structural point deflation in zero-sum rating pools while preserving severe behavioral deterrence, the debater evaluation engine is decoupled into two independent ledgers:
+
+| Dimension | Skill Rating (`Elo Rating`) | Behavioral Integrity (`Reputation Score`) |
+| :--- | :--- | :--- |
+| **Primary Objective** | Measures dialectical skill and argument potency | Measures empirical honesty and rule compliance |
+| **Mathematical Nature** | Zero-Sum ($\Delta\text{PRO} + \Delta\text{CON} = 0$) | Non-Zero-Sum state ledger ($R \in [0, 100]$) |
+| **Matchmaking Role** | Pairs competitors with equivalent skill tiers | Acts as an access gatekeeper (`Gatekeeper`) |
+| **Fallacy Impact** | Reduces round win probability algebraically | Direct and persistent deduction from reputation pool |
+
+---
 
 ### A. Debater Utility Function
-Each debater seeks to maximize expected zero-sum Elo rating shifts:
 
-$$U_{\text{debater}} = \mathbb{E}[\Delta\text{Elo}] - C(\text{Fallacy}) - C(\text{Dropped}) - C(\text{MissingEvidence})$$
+$$U_{\text{debater}} = \mathbb{E}[\Delta\text{Elo}] + \gamma \cdot \mathbb{E}[\Delta R] - C(\text{Dropped}) - C(\text{MissingEvidence})$$
 
 Where:
-* $\mathbb{E}[\Delta\text{Elo}]$: Expected zero-sum Elo rating payoff.
-* $C(\dots)$: Deterministic point deductions evaluated across round criteria.
+* $\mathbb{E}[\Delta\text{Elo}]$: Zero-sum skill rating payoff.
+* $R$: Integrity index governing platform permissions and queue tiers.
+* $\gamma$: Utility scaling coefficient weighting reputation against rank.
 
 ---
 
-### B. Fallacy Deterrence Bound (Mathematical Proof)
-Let a debater decide whether to deploy a deceptive fallacy yielding potential strategic merit $\Delta M \in \{1, 2\}$, detected by peer evaluators with probability $p \in (0, 1]$, and penalized by cost $C_f$:
+### B. Match Resolution vs. Reputation Updates
 
-$$\mathbb{E}[\Delta U] = (1 - p) \cdot \Delta M - p \cdot C_f < 0 \implies C_f > \left(\frac{1 - p}{p}\right) \Delta M$$
+1. **Algebraic Round Outcome (Zero-Sum Invariant):**
+   * Fallacy deductions ($C_f = -3$) depress algebraic points within round ballots to decide round winners.
+   * Total match outcome is converted to standard discrete signals ($W \in \{1.0, 0.5, 0.0\}$).
+   * Elo transfer is strictly zero-sum; point deductions never deflate the macro-rating economy:
 
-Under worst-case evaluation noise where $p \approx 0.5$ and $\Delta M = 2$:
+$$\Delta\text{Elo}_{\text{PRO}} + \Delta\text{Elo}_{\text{CON}} = 0$$
 
-$$C_f > \left(\frac{1 - 0.5}{0.5}\right) \cdot 2 = 2.0$$
+2. **Reputation Ledger Update ($R_t$):**
+   * Independently of win/loss outcomes, each debater's reputation pool updates post-match:
 
-Setting $C_f = 3$ establishes strict dominance: even under elevated evaluation noise, the expected value of deploying a fallacy is strictly negative ($\mathbb{E}[\Delta U] < 0$).
+$$R_{t+1} = \min\left(100.0, \, R_t + \sum \text{CleanRoundBonus} - \sum \text{FallacyPenalty}\right)$$
 
----
+   * **Violation Penalty:** $-10.0$ reputation points per verified fallacy.
+   * **Rehabilitation Credit:** $+0.5$ reputation points per completely fallacy-free round.
 
-### C. Equilibrium Invariants
-
-| Defection Strategy | Deterministic Deterrent Mechanism | Nash Equilibrium Outcome |
-| :--- | :--- | :--- |
-| **Fallacy Deployment (Ad Hominem / Straw Man)** | Asymmetric penalty multiplier: $C_f = -3$ per infraction vs. $+1$ per positive merit. | Expected utility is strictly negative ($\mathbb{E}[\Delta U] < 0$); dominant strategy is **zero fallacy deployment**. |
-| **Rhetorical Evasion (Dropped Targets)** | Unrebutted claims trigger an automatic dropped-argument deduction. | Point leakage minimization enforces **point-by-point refutation**. |
-| **Gish Gallop (Flooding)** | Strict concision ceiling: 800 tokens maximum per round. | Volumetric saturation fails write-time validation; dominant strategy is **dense, concentrated reasoning**. |
-| **Unsubstantiated Assertions** | External evidence gate: minimum 1 verifiable URL required, parsed with strict trailing punctuation exclusion: `https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s.,;:!?)]*)?`. | Code rejects submissions missing citations; dominant strategy is **mandatory sourcing**. |
-
----
-
-## 3. Judge Nash Equilibrium
-
-### A. The Evaluator Trilemma & Keynesian Beauty Contest
-Without programmatic counter-incentives, peer evaluation degrades through three vectors:
-1. **Lazy Voting:** Submitting low-effort ballots to maximize speed.
-2. **Partisan Bias:** Favoring ideological alignment over dialectical rigor.
-3. **Keynesian Beauty Contest:** Voting for the anticipated majority opinion rather than empirical truth to protect consensus scores.
+3. **Reputation Gating Invariants:**
+   * **Elite Queue Lockout:** Users with $R_t < 75.0$ are barred from high-tier competitive pools regardless of Elo rating.
+   * **Automated Quarantine:** If $R_t < 50.0$, write access is automatically suspended until completing interactive fallacy-deconstruction modules.
 
 ---
 
-### B. Anti-Collusive Evaluation Mechanism (Robust Bayesian Truth Serum)
-To dismantle herd conformity and align self-interest with honest evaluation, the engine incorporates the principles of **Robust Bayesian Truth Serum (RBTS)** adapted for small quorums ($3 \le N \le 5$):
+## 3. Judge Nash Equilibrium & Quorum Hardening
 
-Each judge $j$ submits two discrete inputs per criterion $k$:
-1. **Endorsement ($x_{j, k} \in \{0, 1\}$):** Objective determination of criterion presence.
-2. **Peer Prediction ($y_{j, k} \in [0, 1]$):** Predicted fraction of peer judges endorsing the criterion.
+### A. Regularized Robust Bayesian Truth Serum (Micro-Quorums $3 \le N \le 5$)
+To prevent division-by-zero singularities and explosive information bonuses caused by malicious or outlier peer predictions ($y_j \to 0$), the engine applies Laplace smoothing ($\epsilon = 0.05$):
 
-#### 1. Information Score (Rewarding the "Surprisingly Common"):
-Evaluators who identify subtle dialectical violations or strong empirical proofs that lazy evaluators miss receive an information bonus when their endorsement frequency exceeds aggregate prediction:
-
-$$\text{Score}_{\text{info}, j} = \sum_{k=1}^K \ln\left(\frac{\bar{x}_k}{\bar{y}_k}\right) \cdot \mathbf{I}(x_{j, k} = 1)$$
-
-* Where $\bar{x}_k$ is the quorum average endorsement and $\bar{y}_k$ is the geometric mean of peer predictions.
-* **Property:** Honest reporting Pareto-dominates coordination around superficial consensus.
-
-#### 2. Prediction Calibration (Quadratic Scoring Rule):
-Evaluators are scored on how accurately they forecast quorum distribution, penalizing arbitrary guessing:
+$$\text{Score}_{\text{info}, j} = \sum_{k=1}^K \ln\left(\frac{\bar{x}_k + \epsilon}{\bar{y}_k + \epsilon}\right) \cdot \mathbf{I}(x_{j, k} = 1)$$
 
 $$\text{Score}_{\text{pred}, j} = -\alpha \sum_{k=1}^K (y_{j, k} - \bar{x}_k)^2$$
 
+Where:
+* $\bar{x}_k$: Quorum average endorsement for criterion $k$.
+* $\bar{y}_k$: Geometric mean of peer predictions regularized by $\epsilon$.
+* $\epsilon = 0.05$: Prevents mathematical collapse under adversarial inputs.
+
 ---
 
-### C. Multi-Vector Proof of Effort (Anti-Scripting Gate)
-To prevent automated headless browser exploits and trivial scraping of deterministic hash tokens, proof of effort is guarded by two mandatory invariants:
+### B. Sybil Collusion Resistance: Spot-Audit Protocol
+To counter sockpuppet rings attempting majority capture in micro-quorums ($N = 3$):
 
+1. **Hidden Audit Invariant:** 
+   * A pseudo-random sampling gate flags $10\%$ of completed quorums for deterministic audit verification.
+   * Audits are evaluated against high-reputation canary judges ($W_j \ge 2.0$) or pre-verified ground-truth benchmarks.
+2. **Slashing Penalty:**
+   * If a quorum majority contradicts the verified audit benchmark with statistical significance, the deviant majority's calibration weights are immediately slashed:
+
+$$W_j \leftarrow W_j \times 0.20 \quad (\text{Immediate Quarantine})$$
+
+---
+
+### C. Multi-Vector Proof of Effort
 1. **Deterministic Minimum Reading Bound ($T_{\text{min}}$):**
-   * Reading latency is measured strictly between ballot presentation ($t_{\text{open}}$) and ballot submission ($t_{\text{sub}}$).
-   * For an 800-word submission, human physiological ceiling bounded at 300 WPM requires:
    $$\Delta t = t_{\text{sub}} - t_{\text{open}} \ge 120\text{ seconds}$$
-   * Submissions submitted with $\Delta t < T_{\text{min}}$ are dropped silently.
-
+   Submissions faster than physiological reading ceilings are discarded silently.
 2. **Quote-Target Semantic Binding:**
-   * Judges must select the exact rebuttal anchor referenced by the debater from 3 deterministically hashed excerpts. Scripting requires full natural language semantic parsing rather than reading a single index token.
+   Judges must select the exact rebuttal anchor referenced by the debater from 3 deterministically hashed excerpts.
 
 ---
 
-### D. Multiplicative Weight Calibration & Dynamic Quarantining
+### D. Multiplicative Weight Calibration & Dynamic Quarantine
 
 1. **Continuous Weighted Quorum Vector ($\mathbf{V}^*$):**
    $$\mathbf{V}^*_k = \frac{\sum_{j=1}^N W_j \cdot x_{j, k}}{\sum_{j=1}^N W_j}, \quad \forall k \in \{1, \dots, K\}$$
@@ -103,12 +105,8 @@ To prevent automated headless browser exploits and trivial scraping of determini
 
    $$W_j^{(t+1)} = W_j^{(t)} \cdot \exp\left(-\eta \cdot \text{Penalty}_{\text{dev}, j}\right)$$
 
-3. **Dynamic Quarantining Threshold ($\tau_t$):**
-   Instead of a static threshold, an evaluator is quarantined if their reliability falls beyond two standard deviations from the active judge population mean:
-
+3. **Dynamic Quarantine Threshold ($\tau_t$):**
    $$\tau_t = \max\left(0.30, \, \mu_W - 2\sigma_W\right)$$
-
-   * Eliminates systemic drift and adapts to debate complexity.
 
 ---
 
@@ -116,9 +114,12 @@ To prevent automated headless browser exploits and trivial scraping of determini
 
 | Parameter | Identifier | Value | Justification |
 | :--- | :--- | :--- | :--- |
-| **Fallacy Penalty** | $C_f$ | `-3` | Negative expected utility under $p \approx 0.5$ worst-case detection noise. |
-| **Merit Weight** | $M_v$ | `+1` | Unit reward baseline for verified evidence and point-by-point refutation. |
+| **Fallacy Deduction (Round Score)** | $C_f$ | `-3` | Ensures strictly negative expected round payoff. |
+| **Fallacy Penalty (Reputation)** | $\Delta R_{\text{penalty}}$ | `-10.0` | Severe deterrent directly hitting queue eligibility. |
+| **Rehabilitation Increment** | $\Delta R_{\text{clean}}$ | `+0.5` | Asymmetric slow recovery enforcing long-term compliance. |
+| **Laplace Smoothing Regularizer** | $\epsilon$ | `0.05` | Prevents RBTS denominator collapse in micro-quorums. |
+| **Spot-Audit Sampling Frequency** | $P_{\text{audit}}$ | `0.10` | Dismantles small-quorum sybil collusion economics. |
 | **Minimum Reading Time** | $T_{\text{min}}$ | `120s` | Physiological human reading ceiling for 800-word payloads. |
-| **Learning Rate** | $\eta$ | `0.15` | Smooth multiplicative calibration damping noise. |
-| **Quarantine Cutoff** | $\tau$ | `Dynamic (\mu - 2\sigma)` | Adapts dynamically to debate dialectical difficulty. |
+| **Calibration Learning Rate** | $\eta$ | `0.15` | Smooth multiplicative calibration damping noise. |
+| **Dynamic Quarantine Floor** | $\tau$ | `\mu_W - 2\sigma_W` | Adapts dynamically to debate complexity without systemic drift. |
 | **URL Regex Pattern** | `URL_GATE` | Strict Exclusion | Excludes trailing punctuation: `(?:\/[^\s.,;:!?)]*)?`. |
