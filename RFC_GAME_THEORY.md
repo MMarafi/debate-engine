@@ -1,136 +1,134 @@
-# RFC 001: Game-Theoretic Incentive Design & Nash Equilibrium
-*Status: RATIFIED / PRODUCTION-READY SPECIFICATION (v2.4)*  
+# RFC 001: Game-Theoretic Incentive Design & Adversarial Resilience
+*Status: RATIFIED / PRODUCTION-READY SPECIFICATION (v3.0)*  
 *Target Engine: Debate-Engine Core v2.0*  
 
 ---
 
-## 1. Design Philosophy
+## 1. Design Philosophy & Adversarial Threat Model
 
-The objective is to engineer an **Incentive-Compatible Mechanism Design** where strict truthfulness, empirical sourcing, dialectical integrity, and uncorrupted textual auditing form the **strictly dominant strategy** for all participants. Any strategic deviation—such as rhetorical fallacies, tactical abandonment, evasion, lazy auditing, herd conformity, sybil collusion, or partisan bias—deterministically reduces a participant's expected utility across dual evaluation ledgers.
+The engine implements an **Incentive-Compatible Mechanism Design** resilient against strategic, sybil, and automated collusion. The architecture assumes an adversarial environment where participants utilize large language models (LLMs), automated latency sleeps, and coordination during off-peak matchmaking hours. Truthfulness, empirical sourcing, dialectical integrity, and uncorrupted auditing must remain the **strictly dominant strategy** across all rational action profiles.
 
 ---
 
-## 2. Dual-Ledger Debater Architecture & Anti-Exploit Protocols
+## 2. Dual-Ledger Debater Architecture & Nash Equilibrium Bounds
 
-| Dimension | Skill Rating (`Elo Rating`) | Behavioral Integrity (`Reputation Score`) |
+| Evaluation Ledger | Skill Rating (`Elo Rating`) | Behavioral Integrity (`Reputation Score`) |
 | :--- | :--- | :--- |
-| **Primary Objective** | Measures dialectical skill and argument potency | Measures empirical honesty and rule compliance |
-| **Mathematical Nature** | Zero-Sum ($\Delta\text{PRO} + \Delta\text{CON} = 0$) | Non-Zero-Sum state ledger ($R \in [0, 100]$) |
-| **Matchmaking Role** | Pairs competitors with equivalent skill tiers | Acts as an access gatekeeper (`Gatekeeper`) |
-| **Fallacy Impact** | Reduces round win probability algebraically | Direct deduction from reputation pool |
+| **Domain Scope** | Measures dialectical skill and argument potency | Measures empirical honesty and procedural compliance |
+| **Mathematical Nature** | Zero-Sum Invariant ($\Delta\text{PRO} + \Delta\text{CON} = 0$) | Non-Zero-Sum state metric ($R \in [0, 100.0]$) |
+| **Matchmaking Impact** | Pairs competitors within equivalent skill tiers | Acts as an eligibility gatekeeper (`Gatekeeper`) |
+| **Fallacy Deterrence** | Direct round point deduction ($C_f = -3$) | Severe, persistent deduction ($\Delta R = -10.0$) |
 
 ---
 
-### A. Debater Utility Function
+### A. Strict Equilibrium Bound on Reputation Sensitivity ($\gamma$)
+The debater utility function balances expected rating progression against behavioral integrity loss:
 
 $$U_{\text{debater}} = \mathbb{E}[\Delta\text{Elo}] + \gamma \cdot \mathbb{E}[\Delta R] - C(\text{Dropped}) - C(\text{MissingEvidence})$$
 
-Where:
-* $\mathbb{E}[\Delta\text{Elo}]$: Zero-sum skill rating payoff.
-* $R$: Integrity index governing platform permissions and queue tiers.
-* $\gamma$: Utility scaling coefficient weighting reputation against rank.
+To eliminate the incentive for a debater to deploy a deceptive, high-impact fallacy to secure an Elo win, the engine enforces the **Strict Anti-Defection Equilibrium Condition**:
+
+$$\gamma \ge \frac{2 \cdot K_{\max}}{\vert{}\Delta R_{\text{penalty}}\vert{}}$$
+
+* Under standard engine parameters ($K_{\max} = 32$, $\vert{}\Delta R_{\text{penalty}}\vert{} = 10.0$):
+  $$\gamma \ge \frac{64}{10} = 6.4$$
+* **Equilibrium Invariant:** Even if a fallacy guarantees a victory ($+K_{\max}$), the expected net utility is strictly negative ($\Delta U \le 32 - 6.4 \times 10 = -32 < 0$), destroying the economic viability of strategic deception.
 
 ---
 
-### B. Anti-Abandonment Bound: Closing Tactical Timeouts
-To prevent debaters from deliberately abandoning matches (`Timeout`) to shield their reputation from detected fallacies:
+### B. Anti-Abandonment Bound
+To prevent debaters from timing out to shield their reputation when caught in fallacies:
 
-$$|\text{Penalty}_{\text{Timeout}}| > |\text{Penalty}_{\text{Fallacy}}|$$
+$$\vert{}\Delta R_{\text{timeout}}\vert{} > \vert{}\Delta R_{\text{penalty}}\vert{}$$
 
-* **Fallacy Deduction:** $-10.0$ reputation points per verified fallacy.
-* **Forfeit / Timeout Penalty:** Assessed as a forfeit loss via `calculate_zero_sum_elo` PLUS a deterministic deduction of **`-15.0` reputation points**.
-* **Equilibrium Invariant:** Completing the debate round (even with flawed arguments) strictly Pareto-dominates silent abandonment.
-
----
-
-### C. Sybil-Resistant Rehabilitation Farming & Economic Quarantine
-To prevent collusive accounts from farming reputation recovery or bypassing suspensions at zero marginal cost:
-
-* **Queue Invariant:** Rehabilitation credit ($+0.5$ reputation points per clean round) is granted **exclusively in Ranked Random Matchmaking**. Direct-challenge or unranked matches yield zero reputation recovery.
-* **Minimum Textual Density Gate:** The submitted text must contain at least **200 words** ($L \ge 200$) to trigger clean-round recovery.
-* **Economic & Time-Locked Quarantine ($R_t < 50.0$):**
-  * Automatic write-permission revocation.
-  * **Mandatory Cooling-Off Lock:** Account remains frozen for a non-negotiable **14-day deterministic lock** ($\Delta t_{\text{lock}} = 14\text{d}$) regardless of quiz completion, destroying the economic return on automated bot deployment.
-  * **Proof of Calibration:** Reinstatement requires completing 5 consecutive canary-verified audit ballots with $100\%$ accuracy, proving active evaluative effort.
+* **Timeout Penalty:** Forfeit loss committed to the Elo ledger PLUS an immediate deterministic deduction of **`-15.0` reputation points**.
+* **Equilibrium Property:** Engaging and concluding a round strictly dominates intentional abandonment.
 
 ---
 
-## 3. Judge Nash Equilibrium & Hardened Small-Quorum Mechanics
+### C. Sybil-Resistant Rehabilitation & Opponent Entropy
+To defeat collusive reputation farming via automated text generators (LLMs) during low-traffic hours:
 
-### A. Leave-One-Out Robust Bayesian Truth Serum (LOO-RBTS)
-To eliminate self-influence in micro-quorums ($3 \le N \le 5$) where a judge's own ballot inflates the consensus, all aggregations strictly utilize **Leave-One-Out (LOO)** formulations.
+1. **Unique Opponent Entropy Filter:**
+   * Clean-round recovery credit ($+0.5$ reputation) requires pairwise interaction entropy:
+   $$\text{Pairwise Match Interval} \ge 30\text{ Days}$$
+   * If debater PRO and CON have matched within the rolling 30-day window, $\Delta R_{\text{clean}} = 0.0$.
+2. **Textual Complexity Gate:**
+   * In addition to length ($L \ge 200$ words), the submission must pass a deterministic compression-ratio entropy floor ($H_{\text{text}} \ge 0.45$ via standard library `zlib`) to block degenerate token stuffing.
+3. **Cooling-Off Quarantine:**
+   * Accounts falling below $R_t < 50.0$ face an unbypassable **14-day write-lock** ($\Delta t = 14\text{d}$) followed by mandatory canary-evaluated audit benchmarks.
 
-For judge $j$ evaluating criterion $k$:
-1. **Leave-One-Out Endorsement Mean ($\bar{x}_{-j, k}$):**
+---
+
+## 3. Judge Nash Equilibrium & Micro-Quorum Mechanism Design
+
+### A. Correlated Agreement (CA) Mechanism for Micro-Quorums ($3 \le N \le 5$)
+Given that Robust Bayesian Truth Serum (RBTS) exhibits high discretization noise when $N \in [3, 5]$, the engine replaces RBTS with the **Small-Quorum Correlated Agreement (CA) Scoring Rule**.
+
+For each criterion $k$, each judge $j$ submits an endorsement $x_{j, k} \in \{0, 1\}$. Evaluator alignment is calculated pairwise against peer responses without self-influence:
+
+1. **Leave-One-Out Consensus Mean:**
    $$\bar{x}_{-j, k} = \frac{1}{N - 1} \sum_{i \ne j} x_{i, k}$$
-2. **Leave-One-Out Geometric Mean Prediction ($\bar{y}_{-j, k}$):**
-   $$\bar{y}_{-j, k} = \exp\left(\frac{1}{N - 1} \sum_{i \ne j} \ln(y_{i, k} + \epsilon)\right) - \epsilon$$
 
-#### 1. Information Score (Scoring Unexpected Truthfulness):
-$$\text{Score}_{\text{info}, j} = \sum_{k=1}^K \ln\left(\frac{\bar{x}_{-j, k} + \epsilon}{\bar{y}_{-j, k} + \epsilon}\right) \cdot (x_{j, k} - y_{j, k})$$
+2. **Strictly Proper Quadratic Alignment Score:**
+   $$\text{Score}_{\text{align}, j} = 1 - \frac{1}{K} \sum_{k=1}^K (x_{j, k} - \bar{x}_{-j, k})^2$$
 
-* **Incentive Compatibility Proof:** Because $\bar{x}_{-j, k}$ and $\bar{y}_{-j, k}$ are calculated independently of judge $j$'s inputs, judge $j$ cannot inflate the ratio by altering their own endorsement ($x_{j, k}$). Truth-telling strictly maximizes expected payoff.
+3. **Multiplicative Exponential Weight Update:**
+   $$\text{Penalty}_{\text{dev}, j} = 1 - \text{Score}_{\text{align}, j}$$
 
-#### 2. Prediction Calibration (Quadratic Scoring Rule):
-$$\text{Score}_{\text{pred}, j} = -\alpha \sum_{k=1}^K (y_{j, k} - \bar{x}_{-j, k})^2$$
-
----
-
-### B. Dynamic Tiered Slashing (Fault-Tolerant Canary Quorum)
-To dismantle the single-point-of-failure vulnerability (where 1 corrupted Canary prevents all penalties), the audit panel adopts a **Tiered Threshold Consensus**:
-
-* A spot-audit triggers across $10\%$ of finished matches, reviewed by 3 independent canary judges ($W_c \ge 2.0$).
-* Let $M_{\text{agree}}$ be the number of canary judges who conclude that the standard quorum majority committed an evaluative violation:
-
-$$\text{Slashing Action} = 
-\begin{cases} 
-\text{No Penalty}, & \text{if } M_{\text{agree}} \le 1 \quad (\text{Ambiguous / Dissent}) \\
-W_j \leftarrow W_j \times 0.60 \quad (\text{Partial Slashing } 40\%), & \text{if } M_{\text{agree}} = 2 \quad (\text{Supermajority Violation}) \\
-W_j \leftarrow W_j \times 0.20 \quad (\text{Full Slashing } 80\% + \text{Quarantine}), & \text{if } M_{\text{agree}} = 3 \quad (\text{Unanimous Violation})
-\end{cases}$$
-
-* **Property:** A single rogue canary cannot block enforcement; a 2-of-3 supermajority still penalizes collusive quorums, while unanimous agreement guarantees total quarantine.
-
----
-
-### C. Cognitive Proof of Effort (Semantic Rebuttal Binding)
-Relying on a latency timer ($T_{\text{min}} = 120\text{s}$) is vulnerable to simple execution sleep delays. Therefore, cognitive verification is promoted to an **absolute gating invariant**:
-
-1. **Semantic Rebuttal Challenge:**
-   * Judges are presented with a deterministically hashed set of 3 candidate argument quotes from the opponent's prior turn.
-   * Judges must identify the exact premise targeted by the current speaker's rebuttal.
-2. **Gating Invariant:**
-   * **Failure to identify the correct semantic anchor drops the ballot completely** (`ProofOfEffort = 0`). The ballot is discarded from quorum aggregation and yields zero rewards.
-3. **Passive Latency Check:** $T_{\text{min}} = 120\text{s}$ remains only as a secondary sanity filter, not the primary proof.
-
----
-
-### D. Multiplicative Weight Calibration & Dynamic Quarantine
-
-1. **Leave-One-Out Consensus Distance:**
-   $$\text{Penalty}_{\text{dev}, j} = \frac{1}{K} \sum_{k=1}^K (x_{j, k} - \bar{x}_{-j, k})^2$$
-
-2. **Multiplicative Exponential Weight Update:**
    $$W_j^{(t+1)} = W_j^{(t)} \cdot \exp\left(-\eta \cdot \text{Penalty}_{\text{dev}, j}\right)$$
 
-3. **Dynamic Quarantine Floor ($\tau_t$):**
-   $$\tau_t = \max\left(0.30, \, \mu_W - 2\sigma_W\right)$$
+* Eliminates geometric mean division-by-zero singularities and artificial Laplace distortion ($\epsilon$).
+* Truthful reporting of observable dialectical facts strictly maximizes alignment payoff against independent peers.
 
 ---
 
-## 4. Ratified Mathematical Parameters (v2.4 Final Baseline)
+### B. Fault-Tolerant Weighted Canary Audit (Supreme Quorum)
+To dismantle the 1-of-3 canary veto vulnerability, slashing thresholds are parameterized over **Canary Weight Aggregation**:
+
+* A pseudo-random sampling gate flags $10\%$ of finished quorums for blind canary auditing by 3 benchmark evaluators ($W_c \ge 2.0$).
+* Let $W_{\text{agree}}$ be the cumulative weight of canary judges confirming an evaluative infraction by the peer quorum:
+
+$$\text{Canary Agreement Ratio} = \frac{\sum_{c=1}^3 W_c \cdot \mathbf{I}(\text{Violation}_c)}{\sum_{c=1}^3 W_c}$$
+
+* **Tiered Slashing Schedule:**
+  $$\text{Slashing Action} =    \begin{cases}    \text{No Penalty}, & \text{if Ratio} < 0.67 \quad (\text{Dissent / Ambiguous}) \\   W_j \leftarrow W_j \times 0.60 \quad (\text{Partial Slashing } 40\%), & \text{if } 0.67 \le \text{Ratio} < 1.00 \quad (\text{Weighted Supermajority}) \\   W_j \leftarrow W_j \times 0.20 \quad (\text{Full Slashing } 80\% + \text{Quarantine}), & \text{if Ratio} = 1.00 \quad (\text{Unanimous Breach})   \end{cases}$$
+
+* **Security Invariant:** A single compromised or errant canary judge cannot block slashing against a demonstrably collusive quorum.
+
+---
+
+### C. Active Cognitive Proof of Effort (Anti-AFK & Evidence Sanitization)
+
+1. **Semantic Anchor Challenge:**
+   * Judges must map the speaker's refutation to the exact argument premise from 3 deterministically generated candidate anchors.
+   * **Failure Rule:** Incorrect anchor mapping silently aborts ballot persistence (`ProofOfEffort = 0`). The 120-second dwell time serves only as an auxiliary bounds check.
+
+2. **Evidence Path Validation (Anti-Ghost URL Gate):**
+   * To prevent hollow domain stuffing (`https://google.com` or `https://wikipedia.org`), URLs must include specific resource paths:
+   ```python
+   # Requires protocol, valid domain, non-empty path, and excludes trailing punctuation
+   URL_REGEX = r"https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/[^\s.,;:!?)]+"
+   ```
+   * Submissions citing generic root domains without content paths fail write-time validation.
+
+---
+
+## 4. Ratified Parameter Matrix (v3.0 Production Standard)
 
 | Parameter | Identifier | Value | Justification |
 | :--- | :--- | :--- | :--- |
-| **Fallacy Round Deduction** | $C_f$ | `-3` | Ensures strictly negative expected round payoff. |
-| **Fallacy Reputation Penalty** | $\Delta R_{\text{penalty}}$ | `-10.0` | Severe deterrent directly affecting matchmaking eligibility. |
-| **Timeout / Forfeit Penalty** | $\Delta R_{\text{timeout}}$ | `-15.0` | Strictly dominates tactical abandonment. |
-| **Quarantine Cooldown Lock** | $\Delta t_{\text{lock}}$ | **`14 Days`** | Destroys economic incentive for automated sybil recycling. |
-| **RBTS Consensus Metric** | $\bar{x}_{-j, k}$ | **Leave-One-Out (LOO)** | Eliminates self-influence and herding in small quorums. |
-| **Laplace Smoothing Regularizer**| $\epsilon$ | `0.05` | Regularizes geometric mean and avoids singular log limits. |
-| **Audit Sampling Frequency** | $P_{\text{audit}}$ | `0.10` | Random spot-auditing over completed debate quorums. |
-| **Canary Slashing Consensus** | `Canary_Tier` | **Tiered (2/3 = -40%, 3/3 = -80%)** | Eliminates single-auditor veto vulnerability. |
-| **Primary Proof of Effort** | `PoE_Primary` | **Semantic Rebuttal Binding** | Enforces cognitive reading comprehension; cannot be bypassed by sleep delays. |
-| **Calibration Learning Rate** | $\eta$ | `0.15` | Multiplicative decay damping parameter. |
-| **Dynamic Quarantine Floor** | $\tau$ | `\mu_W - 2\sigma_W` | Adaptive baseline isolating statistically aberrant judges. |
-| **URL Regex Pattern** | `URL_GATE` | Strict Exclusion | Excludes trailing punctuation: `(?:\/[^\s.,;:!?)]*)?`. |
+| **Reputation Sensitivity Bound** | $\gamma$ | **`6.4`** | Enforces `γ ≥ 2·K_max / |ΔR_penalty|`; blocks Elo/Reputation arbitrage. |
+| **Fallacy Round Deduction** | $C_f$ | `-3` | Ensures negative round score expected payoff. |
+| **Fallacy Reputation Penalty** | $\Delta R_{\text{penalty}}$ | `-10.0` | Direct subtraction from eligibility ledger. |
+| **Timeout / Forfeit Penalty** | $\Delta R_{\text{timeout}}$ | `-15.0` | Strictly dominates strategic abandonment. |
+| **Entropy Opponent Window** | $\Delta t_{\text{match}}$ | **`30 Days`** | Blocks off-peak pairwise collusion and sybil farming. |
+| **Textual Entropy Floor** | $H_{\text{text}}$ | **`0.45`** | Bounded compression ratio blocking repetitive token stuffing. |
+| **Quarantine Cooldown Lock** | $\Delta t_{\text{lock}}$ | `14 Days` | Eliminates economic returns on automated bot recycling. |
+| **Canary Slashing Supermajority** | $\theta_{\text{canary}}$ | **`0.67 (2/3 Weighted)`** | Eliminates single-auditor veto vulnerability. |
+| **Primary Proof of Effort** | `PoE_Primary` | **Semantic Anchor Binding** | Requires cognitive reading; immune to AFK sleep scripts. |
+| **Evidence Path Invariant** | `URL_REGEX` | Non-empty path required | Prevents root-domain ghost citations. |
+| **Dynamic Quarantine Floor** | $\tau$ | `μ_W - 2σ_W` | Isolates statistically aberrant evaluators adaptively. |
+
+
+```
