@@ -1,25 +1,25 @@
 # RFC 001: Game-Theoretic Incentive Design & Nash Equilibrium
-*Status: RATIFIED / TARGET SPECIFICATION (v2.2)*  
+*Status: RATIFIED / PRODUCTION-READY SPECIFICATION (v2.3)*  
 *Target Engine: Debate-Engine Core v2.0*  
 
 ---
 
 ## 1. Design Philosophy
 
-The objective is to engineer an **Incentive-Compatible Mechanism Design** where strict truthfulness, empirical sourcing, dialectical integrity, and uncorrupted textual auditing form the **strictly dominant strategy** for all participants. Any deviation—such as rhetorical fallacies, evasive omissions, lazy auditing, herd conformity, sybil collusion, or partisan bias—deterministically reduces a participant's expected utility across dual evaluation ledgers.
+The objective is to engineer an **Incentive-Compatible Mechanism Design** where strict truthfulness, empirical sourcing, dialectical integrity, and uncorrupted textual auditing form the **strictly dominant strategy** for all participants. Any deviation—such as rhetorical fallacies, tactical abandonment, evasion, lazy auditing, herd conformity, sybil collusion, or partisan bias—deterministically reduces a participant's expected utility across dual evaluation ledgers.
 
 ---
 
-## 2. Dual-Ledger Debater Architecture & Nash Equilibrium
+## 2. Dual-Ledger Debater Architecture & Anti-Exploit Protocols
 
-To prevent structural point deflation in zero-sum rating pools while preserving severe behavioral deterrence, the debater evaluation engine is decoupled into two independent ledgers:
+The debater evaluation engine separates competitive standing from ethical behavior across two distinct ledgers:
 
 | Dimension | Skill Rating (`Elo Rating`) | Behavioral Integrity (`Reputation Score`) |
 | :--- | :--- | :--- |
 | **Primary Objective** | Measures dialectical skill and argument potency | Measures empirical honesty and rule compliance |
 | **Mathematical Nature** | Zero-Sum ($\Delta\text{PRO} + \Delta\text{CON} = 0$) | Non-Zero-Sum state ledger ($R \in [0, 100]$) |
 | **Matchmaking Role** | Pairs competitors with equivalent skill tiers | Acts as an access gatekeeper (`Gatekeeper`) |
-| **Fallacy Impact** | Reduces round win probability algebraically | Direct and persistent deduction from reputation pool |
+| **Fallacy Impact** | Reduces round win probability algebraically | Direct deduction from reputation pool |
 
 ---
 
@@ -34,33 +34,36 @@ Where:
 
 ---
 
-### B. Match Resolution vs. Reputation Updates
+### B. Anti-Abandonment Bound: Closing Tactical Timeouts
+To prevent debaters from deliberately abandoning matches (`Timeout`) to shield their reputation from detected fallacies:
 
-1. **Algebraic Round Outcome (Zero-Sum Invariant):**
-   * Fallacy deductions ($C_f = -3$) depress algebraic points within round ballots to decide round winners.
-   * Total match outcome is converted to standard discrete signals ($W \in \{1.0, 0.5, 0.0\}$).
-   * Elo transfer is strictly zero-sum; point deductions never deflate the macro-rating economy:
+$$|\text{Penalty}_{\text{Timeout}}| > |\text{Penalty}_{\text{Fallacy}}|$$
 
-$$\Delta\text{Elo}_{\text{PRO}} + \Delta\text{Elo}_{\text{CON}} = 0$$
-
-2. **Reputation Ledger Update ($R_t$):**
-   * Independently of win/loss outcomes, each debater's reputation pool updates post-match:
-
-$$R_{t+1} = \min\left(100.0, \, R_t + \sum \text{CleanRoundBonus} - \sum \text{FallacyPenalty}\right)$$
-
-   * **Violation Penalty:** $-10.0$ reputation points per verified fallacy.
-   * **Rehabilitation Credit:** $+0.5$ reputation points per completely fallacy-free round.
-
-3. **Reputation Gating Invariants:**
-   * **Elite Queue Lockout:** Users with $R_t < 75.0$ are barred from high-tier competitive pools regardless of Elo rating.
-   * **Automated Quarantine:** If $R_t < 50.0$, write access is automatically suspended until completing interactive fallacy-deconstruction modules.
+* **Fallacy Deduction:** $-10.0$ reputation points per verified fallacy.
+* **Forfeit / Timeout Penalty:** Assessed as a forfeit loss via `calculate_zero_sum_elo` PLUS a deterministic deduction of **`-15.0` reputation points**.
+* **Equilibrium Invariant:** Completing the debate round (even with flawed arguments) strictly Pareto-dominates silent abandonment.
 
 ---
 
-## 3. Judge Nash Equilibrium & Quorum Hardening
+### C. Sybil-Resistant Rehabilitation Farming
+To prevent collusive accounts from farming reputation recovery in low-friction private matches:
+
+* **Queue Invariant:** Rehabilitation credit ($+0.5$ reputation points per clean round) is granted **exclusively in Ranked Random Matchmaking**. Direct-challenge or unranked matches yield zero reputation recovery.
+* **Minimum Textual Density Gate:** The submitted text must contain at least **200 words** ($L \ge 200$) to trigger clean-round recovery, preventing low-effort filler text from farming trust.
+* **Cap Ceiling:** Total reputation cannot exceed the initial baseline:
+
+$$R_{t+1} = \min\left(100.0, \, R_t + \sum \text{CleanRoundBonus} - \sum \text{Penalties}\right)$$
+
+* **Gating Rules:**
+  * **Elite Queue Lockout:** Users with $R_t < 75.0$ are barred from high-tier competitive pools.
+  * **Automated Quarantine:** If $R_t < 50.0$, write permissions are suspended until completing interactive logical fallacy modules.
+
+---
+
+## 3. Judge Nash Equilibrium & Tripartite Canary Consensus
 
 ### A. Regularized Robust Bayesian Truth Serum (Micro-Quorums $3 \le N \le 5$)
-To prevent division-by-zero singularities and explosive information bonuses caused by malicious or outlier peer predictions ($y_j \to 0$), the engine applies Laplace smoothing ($\epsilon = 0.05$):
+To prevent division-by-zero singularities and explosive information bonuses caused by malicious peer predictions ($y_j \to 0$), the engine applies Laplace smoothing ($\epsilon = 0.05$):
 
 $$\text{Score}_{\text{info}, j} = \sum_{k=1}^K \ln\left(\frac{\bar{x}_k + \epsilon}{\bar{y}_k + \epsilon}\right) \cdot \mathbf{I}(x_{j, k} = 1)$$
 
@@ -73,16 +76,18 @@ Where:
 
 ---
 
-### B. Sybil Collusion Resistance: Spot-Audit Protocol
-To counter sockpuppet rings attempting majority capture in micro-quorums ($N = 3$):
+### B. Anti-Collusion via Tripartite Canary Quorum (Supreme Audit)
+To eliminate false-positive slashing caused by a single infallible expert's error:
 
-1. **Hidden Audit Invariant:** 
-   * A pseudo-random sampling gate flags $10\%$ of completed quorums for deterministic audit verification.
-   * Audits are evaluated against high-reputation canary judges ($W_j \ge 2.0$) or pre-verified ground-truth benchmarks.
-2. **Slashing Penalty:**
-   * If a quorum majority contradicts the verified audit benchmark with statistical significance, the deviant majority's calibration weights are immediately slashed:
+1. **Spot-Audit Sampling:** $10\%$ of completed quorums are routed into the verification pipeline.
+2. **Tripartite Canary Quorum:** The audit panel consists of **three independent benchmark judges** ($W_c \ge 2.0$).
+3. **Unanimous Slashing Threshold:** Weight slashing of the standard quorum majority occurs **strictly if and only if all three Canary judges achieve 100% unanimous consensus** against the standard quorum's decision:
 
-$$W_j \leftarrow W_j \times 0.20 \quad (\text{Immediate Quarantine})$$
+$$\text{Slashing Triggered} \iff \sum_{c=1}^3 \mathbf{I}(\text{Canary}_c = \text{Consensus}_{\text{Canary}}) = 3 \quad \land \quad \text{Consensus}_{\text{Canary}} \ne \mathbf{V}^*_{\text{Quorum}}$$
+
+* **Slashing Severity:** Slashing reduces the deviant majority's calibration weights by 80%:
+
+$$W_j \leftarrow W_j \times 0.20 \quad (\text{Immediate Pool Quarantine})$$
 
 ---
 
@@ -105,20 +110,24 @@ $$W_j \leftarrow W_j \times 0.20 \quad (\text{Immediate Quarantine})$$
 
    $$W_j^{(t+1)} = W_j^{(t)} \cdot \exp\left(-\eta \cdot \text{Penalty}_{\text{dev}, j}\right)$$
 
-3. **Dynamic Quarantine Threshold ($\tau_t$):**
+3. **Dynamic Quarantine Floor ($\tau_t$):**
    $$\tau_t = \max\left(0.30, \, \mu_W - 2\sigma_W\right)$$
 
 ---
 
-## 4. Ratified Parameter Matrix
+## 4. Ratified Mathematical Parameters (v2.3 Production Baseline)
 
 | Parameter | Identifier | Value | Justification |
 | :--- | :--- | :--- | :--- |
-| **Fallacy Deduction (Round Score)** | $C_f$ | `-3` | Ensures strictly negative expected round payoff. |
-| **Fallacy Penalty (Reputation)** | $\Delta R_{\text{penalty}}$ | `-10.0` | Severe deterrent directly hitting queue eligibility. |
+| **Fallacy Round Deduction** | $C_f$ | `-3` | Ensures strictly negative expected round payoff. |
+| **Fallacy Reputation Penalty** | $\Delta R_{\text{penalty}}$ | `-10.0` | Severe deterrent directly affecting matchmaking eligibility. |
+| **Timeout / Forfeit Penalty** | $\Delta R_{\text{timeout}}$ | **`-15.0`** | Prevents tactical abandonment to shield reputation. |
 | **Rehabilitation Increment** | $\Delta R_{\text{clean}}$ | `+0.5` | Asymmetric slow recovery enforcing long-term compliance. |
+| **Rehabilitation Preconditions** | `Rehab_Reqs` | **Ranked Match + $\ge 200$ words** | Eliminates sybil collusive reputation farming. |
 | **Laplace Smoothing Regularizer** | $\epsilon$ | `0.05` | Prevents RBTS denominator collapse in micro-quorums. |
-| **Spot-Audit Sampling Frequency** | $P_{\text{audit}}$ | `0.10` | Dismantles small-quorum sybil collusion economics. |
+| **Audit Sampling Frequency** | $P_{\text{audit}}$ | `0.10` | Dismantles small-quorum sybil collusion economics. |
+| **Canary Audit Panel** | `Audit_Size` | **3 Canary Judges (100% Unanimous)** | Eliminates false-positive slashing from single-auditor error. |
+| **Canary Slashing Penalty** | $\text{Slash}_{\text{ratio}}$ | `0.20 (80% drop)` | Immediate quarantine for collusive or negligent judges. |
 | **Minimum Reading Time** | $T_{\text{min}}$ | `120s` | Physiological human reading ceiling for 800-word payloads. |
 | **Calibration Learning Rate** | $\eta$ | `0.15` | Smooth multiplicative calibration damping noise. |
 | **Dynamic Quarantine Floor** | $\tau$ | `\mu_W - 2\sigma_W` | Adapts dynamically to debate complexity without systemic drift. |
